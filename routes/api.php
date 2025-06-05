@@ -108,6 +108,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('delete_supplier', [AdminAPIController::class, 'delete_supplier']);
 		Route::get('get_supplier/{id}', [AdminAPIController::class, 'get_supplier']);
 		Route::post('get_all_supplier', [AdminAPIController::class, 'get_all_supplier']);
+		Route::post('get_supplier_wise_sparepart', [AdminAPIController::class, 'getsupplierWiseSparePart']);
 
 		// Product Master
 		Route::get('product_master', [AdminAPIController::class, 'product_master']);

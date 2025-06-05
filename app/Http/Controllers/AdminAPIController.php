@@ -2897,7 +2897,16 @@ class AdminAPIController extends Controller
 	// Suppliers 
 	public function get_suppliers()
 	{
-		$supplierList = Supplier::paginate(100);
+		$supplierList = Supplier::leftJoin('spare_parts', function ($join) {
+			$join->on(DB::raw("FIND_IN_SET(spare_parts.id, supplier.spare_part_ids)"), '>', DB::raw('0'));
+		})
+			->select(
+				'supplier.*',
+				DB::raw('GROUP_CONCAT(spare_parts.part_name SEPARATOR " | ") as spare_part_names ')
+			)
+			->groupBy('supplier.id')
+			->paginate(100);
+
 		if (!empty($supplierList)) {
 			foreach ($supplierList as $supplier) {
 				$supplier->logo_name = !empty($supplier->logo) ? $supplier->logo : NULL;
@@ -2919,15 +2928,14 @@ class AdminAPIController extends Controller
 			'email' => 'required',
 			'phone' => 'required',
 			'address' => 'required',
-			'tan_number' => 'required',
-			// 'logo' => 'required',
+			'spare_part_ids' => 'required|array',
 		], [
 			'name.required' => 'Please Enter Name',
 			'email.required' => 'Please Enter Email',
 			'phone.required' => 'Please Enter Phone Number',
 			'address.required' => 'Please Enter Address',
-			'tan_number.required' => 'Please Enter Tan Number',
-			// 'logo.required' => 'Please Select Logo',
+			'spare_part_ids.required' => 'Please Select Raw Material',
+			'spare_part_ids.array' => 'Raw Material must be an array',
 		]);
 
 		if ($validator->fails()) {
@@ -2947,7 +2955,8 @@ class AdminAPIController extends Controller
 			'email' => $request->email,
 			'phone' => $request->phone,
 			'address' => $request->address,
-			'tan_number' => $request->tan_number,
+			'tan_number' => (!empty($request->tan_number)) ? $request->tan_number : NULL,
+			'spare_part_ids' => (!empty($request->spare_part_ids)) ? implode(',', $request->spare_part_ids) : [],
 			'logo' => $fileName,
 		]);
 
@@ -2966,14 +2975,15 @@ class AdminAPIController extends Controller
 			'email' => 'required',
 			'phone' => 'required',
 			'address' => 'required',
-			'tan_number' => 'required',
+			'spare_part_ids' => 'required|array',
 		], [
 			'id.required' => 'ID Is Required',
 			'name.required' => 'Please Enter Name',
 			'email.required' => 'Please Enter Email',
 			'phone.required' => 'Please Enter Phone Number',
 			'address.required' => 'Please Enter Address',
-			'tan_number.required' => 'Please Enter Tan Number',
+			'spare_part_ids.required' => 'Please Select Raw Material',
+			'spare_part_ids.array' => 'Raw Material must be an array',
 		]);
 
 		if ($validator->fails()) {
@@ -2985,7 +2995,6 @@ class AdminAPIController extends Controller
 			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
 			$path = public_path() . '/storage/supplier/';
 			$file->move($path, $fileName);
-			// img update
 			DB::table('supplier')->where("id", $request->id)->update([
 				'logo' => $fileName,
 			]);
@@ -2996,7 +3005,8 @@ class AdminAPIController extends Controller
 			'email' => $request->email,
 			'phone' => $request->phone,
 			'address' => $request->address,
-			'tan_number' => $request->tan_number,
+			'tan_number' => (!empty($request->tan_number)) ? $request->tan_number : NULL,
+			'spare_part_ids' => (!empty($request->spare_part_ids)) ? implode(',', $request->spare_part_ids) : [],
 		]);
 
 		return $this->response("Supplier Update Successfully.", false);
@@ -3024,7 +3034,17 @@ class AdminAPIController extends Controller
 			return $this->response("Supplier ID Is Required");
 		}
 
-		$supplierData = Supplier::where('id', $id)->first();
+		$supplierData = Supplier::leftJoin('spare_parts', function ($join) {
+			$join->on(DB::raw("FIND_IN_SET(spare_parts.id, supplier.spare_part_ids)"), '>', DB::raw('0'));
+		})
+			->select(
+				'supplier.*',
+				DB::raw('GROUP_CONCAT(spare_parts.part_name) as spare_part_names')
+			)
+			->where('supplier.id', $id)
+			->groupBy('supplier.id')
+			->first();
+
 		$supplierData->logo_name = !empty($supplierData->logo) ? $supplierData->logo : NULL;
 		$supplierData->logo = asset('/storage/supplier/' . $supplierData->logo);
 
@@ -3237,7 +3257,7 @@ class AdminAPIController extends Controller
 
 	public function spare_parts()
 	{
-		$SparePartsData = SpareParts::paginate(100);
+		$SparePartsData = SpareParts::orderBy("part_name", "asc")->paginate(100);
 
 		if (!$SparePartsData->isEmpty()) {
 			foreach ($SparePartsData as $sparePart) {
@@ -3428,6 +3448,29 @@ class AdminAPIController extends Controller
 			return $this->response("", false, $SparePartsList);
 		} else {
 			return $this->response("Raw Material Found.", true);
+		}
+	}
+
+	public function getsupplierWiseSparePart(Request $request)
+	{
+
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+		], [
+			'id.required' => 'Please Select Supplier Name',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$supplierData = Supplier::where('id', $request->id)->select('spare_part_ids')->first();
+
+		if (!empty($supplierData->spare_part_ids)) {
+			$data = SpareParts::whereIn("id", explode(',', $supplierData->spare_part_ids))->select('id', 'part_name')->get();
+			return $this->response("", false, $data);
+		} else {
+			return $this->response("Not Found Raw Material!", true);
 		}
 	}
 

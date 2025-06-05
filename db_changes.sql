@@ -164,3 +164,8 @@ ALTER TABLE `users` ADD `status` tinyint(2) NOT NULL DEFAULT '1' COMMENT '0=>In 
 ALTER TABLE `spare_parts` ADD `opening_stock` int NULL AFTER `stock_qty`;
 
 ALTER TABLE `invoice` ADD `bill_to` text NULL AFTER `customer_id`;
+
+-- 04-06-2025
+
+ALTER TABLE `supplier`
+ADD `spare_part_ids` text NULL AFTER `updated_at`;
