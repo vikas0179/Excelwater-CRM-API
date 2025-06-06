@@ -155,7 +155,7 @@ ADD `billing_city` varchar(100) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `billing
 ADD `billing_state` varchar(100) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `billing_city`,
 ADD `billing_zipcode` varchar(20) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `billing_state`,
 ADD `shipping_address` text COLLATE 'utf8mb4_unicode_ci' NULL AFTER `billing_zipcode`,
-ADD `shipping_landmark` varchar(100) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `shipping_addr…
+ADD `shipping_landmark` varchar(100) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `shipping_addr`;
 
 ALTER TABLE `users` ADD `visible_pass` varchar(256) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `password`;
 
@@ -167,5 +167,8 @@ ALTER TABLE `invoice` ADD `bill_to` text NULL AFTER `customer_id`;
 
 -- 04-06-2025
 
-ALTER TABLE `supplier`
-ADD `spare_part_ids` text NULL AFTER `updated_at`;
+ALTER TABLE `supplier` ADD `spare_part_ids` text NULL AFTER `updated_at`;
+
+
+-- 6-6-2025
+ALTER TABLE `invoice` ADD `void_status` tinyint(2) NOT NULL DEFAULT '0' COMMENT '0=>Off, 1=>On';

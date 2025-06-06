@@ -136,11 +136,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 		// Invoice
 		Route::get('invoices', [AdminAPIController::class, 'invoices']);
+		Route::get('void_invoices', [AdminAPIController::class, 'VoidInvoices']);
 		Route::post('add_invoice', [AdminAPIController::class, 'add_invoice']);
 		Route::get('get_invoice/{id}', [AdminAPIController::class, 'get_invoice']);
 		Route::post('delete_invoice', [AdminAPIController::class, 'delete_invoice']);
 		Route::post('edit_invoice', [AdminAPIController::class, 'edit_invoice']);
 		// Route::post('check_use_parts', [AdminAPIController::class, 'check_use_parts']);
+		Route::post('change_void_status', [AdminAPIController::class, 'ChangeVoidStatus']);
+		Route::post('invoice_send_mail', [AdminAPIController::class, 'invoiceMailSend']);
 
 		// Users
 		Route::get('get_users', [AdminAPIController::class, 'GetUsers']);
