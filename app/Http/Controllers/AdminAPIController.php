@@ -3863,6 +3863,38 @@ class AdminAPIController extends Controller
 		]);
 
 		if (!empty($id)) {
+			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
+			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no) {
+				$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
+				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData'))->render();
+
+				$mail = new PHPMailer(true);
+				try {
+					$mail->SMTPDebug = 0;
+					$mail->isSMTP();
+					$mail->Host = env('MAIL_HOST');
+					$mail->SMTPAuth = true;
+					$mail->Username = env('MAIL_USERNAME');
+					$mail->Password = env('MAIL_PASSWORD');
+					$mail->SMTPSecure = env('MAIL_ENCRYPTION');
+					$mail->Port = env('MAIL_PORT');
+					$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+					$mail->addAddress($InvoiceData->customer_email);
+					$mail->isHTML(true);
+					$mail->Subject = "Invoice";
+					$mail->Body = $html;
+					if (!$mail->send()) {
+						return $this->response($mail->ErrorInfo, true);
+					} else {
+						return $this->response("Email has been sent.", false);
+					}
+				} catch (Exception $e) {
+					return $this->response("Message could not be sent.", true);
+				}
+			} else {
+				return $this->response("Invoice Data Not Found.", true);
+			}
+
 			return $this->response("Invoice Added Successfully.", false);
 		} else {
 			return $this->response("Invoice Error.", true);
@@ -3992,6 +4024,39 @@ class AdminAPIController extends Controller
 			'total_amount' => $total_amount,
 		]);
 
+
+		$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $request->id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
+		if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no) {
+			$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
+			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData'))->render();
+
+			$mail = new PHPMailer(true);
+			try {
+				$mail->SMTPDebug = 0;
+				$mail->isSMTP();
+				$mail->Host = env('MAIL_HOST');
+				$mail->SMTPAuth = true;
+				$mail->Username = env('MAIL_USERNAME');
+				$mail->Password = env('MAIL_PASSWORD');
+				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
+				$mail->Port = env('MAIL_PORT');
+				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+				$mail->addAddress($InvoiceData->customer_email);
+				$mail->isHTML(true);
+				$mail->Subject = "Invoice";
+				$mail->Body = $html;
+				if (!$mail->send()) {
+					return $this->response($mail->ErrorInfo, true);
+				} else {
+					return $this->response("Email has been sent.", false);
+				}
+			} catch (Exception $e) {
+				return $this->response("Message could not be sent.", true);
+			}
+		} else {
+			return $this->response("Invoice Data Not Found.", true);
+		}
+
 		return $this->response("Invoice Update Successfully.", false);
 	}
 
@@ -4034,59 +4099,6 @@ class AdminAPIController extends Controller
 			return $this->response("Void Status Changed!", false, $invoiceData);
 		} else {
 			return $this->response("Invoice Not Found.", true);
-		}
-	}
-
-	public function invoiceMailSend(Request $request)
-	{
-		$validator = Validator::make(
-			$request->all(),
-			[
-				'id' => 'required',
-			],
-			[
-				'id.required' => 'Please Enter Invoice ID',
-			]
-		);
-
-		if ($validator->fails()) {
-			return $this->response($validator->errors()->first(), true);
-		}
-
-		$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $request->id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
-
-		if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no) {
-			$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
-			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData'))->render();
-			// echo $html;
-			// die;
-
-			$mail = new PHPMailer(true);
-			try {
-				$mail->SMTPDebug = 0;
-				$mail->isSMTP();
-				$mail->Host = env('MAIL_HOST');
-				$mail->SMTPAuth = true;
-				$mail->Username = env('MAIL_USERNAME');
-				$mail->Password = env('MAIL_PASSWORD');
-				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
-				$mail->Port = env('MAIL_PORT');
-				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-				$mail->addAddress($InvoiceData->customer_email);
-				$mail->isHTML(true);
-				$mail->Subject = "Invoice";
-				$mail->Body = "Hello";
-
-				if (!$mail->send()) {
-					return $this->response($mail->ErrorInfo, true);
-				} else {
-					return $this->response("Email has been sent.", false);
-				}
-			} catch (Exception $e) {
-				return $this->response("Message could not be sent.", true);
-			}
-		} else {
-			return $this->response("Invoice Data Not Found.", true);
 		}
 	}
 
