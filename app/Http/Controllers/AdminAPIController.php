@@ -3555,7 +3555,7 @@ class AdminAPIController extends Controller
 				if (!empty($order->invoice_file)) {
 					$order->invoice_file = asset('/storage/invoice/' . $order->invoice_file);
 				}
-				
+
 				$orderitemList = OrderItem::where('order_id', $order->id)->get();
 				if ($orderitemList->isNotEmpty()) {
 					foreach ($orderitemList as $item) {
@@ -3564,16 +3564,15 @@ class AdminAPIController extends Controller
 					$order->order_items = $orderitemList;
 				}
 
-				// Fetch stock items
 				$StocksList = Stocks::where('order_id', $order->id)->get();
 				if ($StocksList->isNotEmpty()) {
 					foreach ($StocksList as &$stock) {
-						$stock->suppliername = Supplier::where('id', $stock->supplier_id)->first()->name;
+						$supplier = Supplier::where('id', $stock->supplier_id)->first();
+						$stock->suppliername = (!empty($supplier) && !empty($supplier->name)) ? $supplier->name : null;
 						$spare = SpareParts::where('id', $stock->spare_id)->first();
 						$stock->spare_part_name = $spare->part_name ?? '';
 						$stock->spare_parts_id = $spare->id ?? null;
 					}
-
 					$order->stock_items = $StocksList;
 				}
 			}
