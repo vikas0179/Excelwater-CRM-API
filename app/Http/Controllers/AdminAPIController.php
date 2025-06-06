@@ -3550,11 +3550,12 @@ class AdminAPIController extends Controller
 		$orderData = Order::paginate(100);
 		if (!empty($orderData)) {
 			foreach ($orderData as $order) {
-				$order->supplier_name = Supplier::where('id', $order->supplier_id)->first()->name;
+				$supplier = Supplier::find($order->supplier_id);
+				$order->supplier_name = (!empty($supplier) && !empty($supplier->name)) ? $supplier->name : null;
 				if (!empty($order->invoice_file)) {
 					$order->invoice_file = asset('/storage/invoice/' . $order->invoice_file);
 				}
-				// Fetch order items and add status label
+				
 				$orderitemList = OrderItem::where('order_id', $order->id)->get();
 				if ($orderitemList->isNotEmpty()) {
 					foreach ($orderitemList as $item) {
