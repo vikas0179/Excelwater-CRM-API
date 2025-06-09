@@ -3082,7 +3082,7 @@ class AdminAPIController extends Controller
 		if (!empty($ProductMasterList)) {
 			return $this->response("", false, $ProductMasterList);
 		} else {
-			return $this->response("Not Found Product Master List.", true);
+			return $this->response("Not Found Product List.", true);
 		}
 	}
 
@@ -3141,9 +3141,9 @@ class AdminAPIController extends Controller
 		]);
 
 		if ($last_id == true) {
-			return $this->response("Product Master Add Successfully.", false);
+			return $this->response("Product Add Successfully.", false);
 		} else {
-			return $this->response("Product Master Error.", true);
+			return $this->response("Product  Error.", true);
 		}
 	}
 
@@ -3203,7 +3203,7 @@ class AdminAPIController extends Controller
 			'desc' => $request->desc,
 			'spare_parts' => $json_item,
 		]);
-		return $this->response("Product Master Update Successfully.", false);
+		return $this->response("Product Update Successfully.", false);
 	}
 
 	public function delete_product_master(Request $request)
@@ -3220,25 +3220,25 @@ class AdminAPIController extends Controller
 
 		if (ProductMaster::find($request->id)) {
 			DB::table('product_master')->where('id', $request->id)->delete();
-			return $this->response("Product Master Delete Successfully", false);
+			return $this->response("Product Delete Successfully", false);
 		} else {
-			return $this->response("Product Master Data Not Found.", true);
+			return $this->response("Product Data Not Found.", true);
 		}
 	}
 
 	public function get_product_master($id)
 	{
 		if (empty($id)) {
-			return $this->response("Product Master ID Is Required");
+			return $this->response("Product ID Is Required");
 		}
 
 		$ProductMasterData = ProductMaster::where('id', $id)->first();
 		$ProductMasterData->image = asset('/storage/product_master/' . $ProductMasterData->image);
 		$ProductMasterData->spare_parts = (!empty($ProductMasterData->spare_parts)) ? json_decode($ProductMasterData->spare_parts, true) : [];
 		if (!empty($ProductMasterData)) {
-			return $this->response("Product Master Data.", false, $ProductMasterData);
+			return $this->response("Product Data.", false, $ProductMasterData);
 		} else {
-			return $this->response("Product Master Data Not Found.", true);
+			return $this->response("Product Data Not Found.", true);
 		}
 	}
 
@@ -3539,9 +3539,9 @@ class AdminAPIController extends Controller
 		]);
 
 		if (!empty($id)) {
-			return $this->response("Order Add Successfully.", false);
+			return $this->response("Raw Material Order Add Successfully.", false);
 		} else {
-			return $this->response("Order Error.", true);
+			return $this->response("Raw Material Order Error.", true);
 		}
 	}
 
@@ -3579,7 +3579,7 @@ class AdminAPIController extends Controller
 
 			return $this->response("", false, $orderData);
 		} else {
-			return $this->response("Order Not Found.", true);
+			return $this->response("Raw Material Order Not Found.", true);
 		}
 	}
 
@@ -3596,9 +3596,9 @@ class AdminAPIController extends Controller
 				'order_detail' => $orderitemData,
 			);
 
-			return $this->response("Order Data.", false, $orderAry);
+			return $this->response("Raw Material Order Data.", false, $orderAry);
 		} else {
-			return $this->response("Order Not Found.", true);
+			return $this->response("Raw Material Order Not Found.", true);
 		}
 	}
 
@@ -3617,9 +3617,9 @@ class AdminAPIController extends Controller
 		if (Order::find($request->id)) {
 			DB::table('order')->where('id', $request->id)->delete();
 			DB::table('order_item')->where('order_id', $request->id)->delete();
-			return $this->response("Order Delete Successfully", false);
+			return $this->response("Raw Material Order Delete Successfully", false);
 		} else {
-			return $this->response("Order Not Found.", true);
+			return $this->response("Raw Material Order Not Found.", true);
 		}
 	}
 
@@ -3686,7 +3686,7 @@ class AdminAPIController extends Controller
 			'total_amount' => $total_amount,
 		]);
 
-		return $this->response("Order Update Successfully.", false);
+		return $this->response("Raw Material Order Update Successfully.", false);
 	}
 
 	public function edit_order_details(Request $request)
@@ -3736,7 +3736,7 @@ class AdminAPIController extends Controller
 		}
 
 
-		return $this->response("Order details updated successfully.", false);
+		return $this->response("Raw Material Order details updated successfully.", false);
 	}
 
 
