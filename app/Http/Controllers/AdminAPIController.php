@@ -44,6 +44,8 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Carbon\Carbon;
 use DateTime;
 use PHPMailer\PHPMailer\PHPMailer;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
 
 class AdminAPIController extends Controller
 {
@@ -3788,7 +3790,8 @@ class AdminAPIController extends Controller
 			'rate' => 'required|array',
 			'description' => 'required',
 			'image' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
-			'invoice_no' => 'required|nullable|digits:6|numeric|unique:invoice,invoice_no',
+			// 'invoice_no' => 'required|nullable|digits:6|numeric|unique:invoice,invoice_no',
+			'invoice_no' => 'required|nullable|digits:6|numeric',
 			// 'part_id' => 'required',
 			// 'use_part_qty' => 'required',
 		], [
@@ -3858,7 +3861,14 @@ class AdminAPIController extends Controller
 			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
 			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
 				$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
-				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData'))->render();
+
+				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
+				$QrCode = QrCode::size(80)->generate($InvoiceUrl);
+
+				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
+				echo $html;
+				die;
+
 				$mail = new PHPMailer(true);
 				try {
 					$mail->SMTPDebug = 0;
