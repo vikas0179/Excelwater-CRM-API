@@ -99,9 +99,9 @@
         </div>
         <div style="border: 1px solid #1F2937; padding: 15px; display:flex; justify-content:space-between">
 
-            <div>
+            {{-- <div>
                 <?= $QrCode ?>
-            </div>
+            </div> --}}
             <div style="display:flex; align-items: center;">
                 <a href="<?= $InvoiceUrl ?>"
                     style="text-decoration: none; background-color: #2563EB; color: #FFFFFF; padding: 8px 16px; border-radius: 4px;">Invoice</a>

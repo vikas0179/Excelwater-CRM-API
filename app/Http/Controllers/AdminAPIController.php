@@ -3866,8 +3866,6 @@ class AdminAPIController extends Controller
 				$QrCode = QrCode::size(80)->generate($InvoiceUrl);
 
 				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
-				echo $html;
-				die;
 
 				$mail = new PHPMailer(true);
 				try {
@@ -4017,7 +4015,10 @@ class AdminAPIController extends Controller
 		$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $request->id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
 		if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
 			$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
-			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData'))->render();
+			$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
+			$QrCode = QrCode::size(80)->generate($InvoiceUrl);
+			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
+
 			$mail = new PHPMailer(true);
 			try {
 				$mail->SMTPDebug = 0;
