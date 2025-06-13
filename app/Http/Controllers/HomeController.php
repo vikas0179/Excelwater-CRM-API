@@ -35,40 +35,44 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class HomeController extends Controller
 {
 
-    public function GetInvoiceDetail(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'invoice_no' => 'required',
-        ], [
-            'invoice_no.required' => 'Invoice Number is required',
-        ]);
+   public function GetInvoiceDetail(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'invoice_no' => 'required',
+    ], [
+        'invoice_no.required' => 'Invoice Number is required',
+    ]);
 
-        if ($validator->fails()) {
-            return $this->response($validator->errors()->first(), true);
-        }
-        $InvoiceData = Invoice::where('invoice_no', $request->invoice_no)->select('id', 'created_at', 'bill_to', 'ship_to', 'invoice_no', 'invoice_date', 'total_amount')->first();
-        if (!empty($InvoiceData)) {
-            // $InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
-            // $qrCodeName = 'qrcode_' . $InvoiceData->invoice_no . '.svg';
-            // $qrCodeDir = public_path('storage/qrcode/');
-            // $qrCodePath = $qrCodeDir . $qrCodeName;
-            // if (!file_exists($qrCodeDir)) {
-            //     mkdir($qrCodeDir, 0777, true);
-            // }
-            // file_put_contents($qrCodePath, $svg);
-            // $InvoiceData->qr_code_path = 'storage/qrcode/' . $qrCodeName;
-            $InvoiceItemData = InvoiceItem::where('invoice_id', $InvoiceData->id)->select('item', 'desc', 'qty', 'rate', 'amount')->get();
-        }
-
-        $data = array(
-            'invoice' => isset($InvoiceData) && (!empty($InvoiceData)) ? $InvoiceData : NULL,
-            'items' => isset($InvoiceItemData) && (!empty($InvoiceItemData)) ? $InvoiceItemData : NULL,
-        );
-
-        if (!empty($InvoiceData)) {
-            return $this->response("", false, $data);
-        } else {
-            return $this->response("", true);
-        }
+    if ($validator->fails()) {
+        return $this->response($validator->errors()->first(), true);
     }
+
+    // Fetch invoice data including customer_id
+    $InvoiceData = Invoice::where('invoice_no', $request->invoice_no)
+        ->select('id', 'created_at', 'bill_to', 'ship_to', 'invoice_no', 'invoice_date', 'total_amount', 'customer_id')
+        ->first();
+
+    if (!empty($InvoiceData)) {
+        // Fetch the customer name from User model
+        $userData = User::where('id', $InvoiceData->customer_id)->first();
+        $InvoiceData->customer_name = $userData ? $userData->name : '';
+
+        // Fetch invoice items
+        $InvoiceItemData = InvoiceItem::where('invoice_id', $InvoiceData->id)
+            ->select('item', 'desc', 'qty', 'rate', 'amount')
+            ->get();
+    }
+
+    $data = [
+        'invoice' => isset($InvoiceData) && (!empty($InvoiceData)) ? $InvoiceData : null,
+        'items'   => isset($InvoiceItemData) && (!empty($InvoiceItemData)) ? $InvoiceItemData : null,
+    ];
+
+    if (!empty($InvoiceData)) {
+        return $this->response("", false, $data);
+    } else {
+        return $this->response("", true);
+    }
+}
+
 }
