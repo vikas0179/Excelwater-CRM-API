@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminAPIController;
+use App\Http\Controllers\Controller;
+use App\Http\Controllers\HomeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,8 +20,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 	Route::post('leads/save', [AdminAPIController::class, 'lead_save']);
 
+	Route::post('get_invoice_detail', [HomeController::class, 'GetInvoiceDetail']);
+
 	Route::post('login', [AdminAPIController::class, 'login']);
 	Route::post('/', [AdminAPIController::class, 'login']);
+
 
 	Route::post('forgot-password', [AdminAPIController::class, 'forgot_password']);
 	Route::post('verify-token', [AdminAPIController::class, 'verify_token']);

@@ -3745,7 +3745,7 @@ class AdminAPIController extends Controller
 	// Invoices
 	public function invoices()
 	{
-		$invoices = Invoice::where('void_status', 0)->paginate(100);
+		$invoices = Invoice::where('void_status', 0)->orderBy("id", "DESC")->paginate(100);
 		if (!empty($invoices)) {
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
@@ -3762,7 +3762,7 @@ class AdminAPIController extends Controller
 
 	public function VoidInvoices()
 	{
-		$invoices = Invoice::where('void_status', 1)->paginate(100);
+		$invoices = Invoice::where('void_status', 1)->orderBy("id", "DESC")->paginate(100);
 		if (!empty($invoices)) {
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
