@@ -4304,9 +4304,9 @@ class AdminAPIController extends Controller
 		}
 
 		if (!empty($NewAry)) {
-			return $this->response("", false, $NewAry);
+			return $this->response(null, false, $NewAry);
 		} else {
-			return $this->response("", true);
+			return $this->response(null, true);
 		}
 	}
 }
