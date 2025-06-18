@@ -36,6 +36,7 @@ use App\Models\ProductMaster;
 use App\Models\SpareParts;
 use App\Models\Stocks;
 use App\Models\Supplier;
+use App\Models\Transaction;
 use Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Reader\Exception;
@@ -3750,8 +3751,6 @@ class AdminAPIController extends Controller
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
-				$invoice->image_name = $invoice->image;
-				$invoice->image = asset('/storage/invoice/' . $invoice->image);
 				$invoice->invoice_detail = InvoiceItem::where('invoice_id', $invoice->id)->get();
 			}
 		}
@@ -3767,8 +3766,6 @@ class AdminAPIController extends Controller
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
-				$invoice->image_name = $invoice->image;
-				$invoice->image = asset('/storage/invoice/' . $invoice->image);
 				$invoice->invoice_detail = InvoiceItem::where('invoice_id', $invoice->id)->get();
 			}
 		}
@@ -3789,11 +3786,7 @@ class AdminAPIController extends Controller
 			'qty' => 'required|array',
 			'rate' => 'required|array',
 			'description' => 'required',
-			'image' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
-			// 'invoice_no' => 'required|nullable|digits:6|numeric|unique:invoice,invoice_no',
-			'invoice_no' => 'required|nullable|digits:6|numeric',
-			// 'part_id' => 'required',
-			// 'use_part_qty' => 'required',
+			'invoice_no' => 'required|nullable|digits:6|numeric|unique:invoice,invoice_no',
 		], [
 			'invoice_date.required' => 'Please Select Invoice Date',
 			'product_id.required' => 'Please Select Product Name',
@@ -3802,12 +3795,9 @@ class AdminAPIController extends Controller
 			'qty.required' => 'Please Enter Quantity',
 			'rate.required' => 'Please Enter Rate',
 			'description.required' => 'Please Enter Description',
-			'image.mimes' => 'Only jpg, jpeg, png, or pdf files are allowed',
 			'invoice_no.digits' => 'Invoice Number must be 6 digits',
 			'invoice_no.numeric' => 'Invoice Number must be a number',
 			'invoice_no.unique' => 'This Invoice Number already exists',
-			// 'part_id.required' => 'Please Select Spare Part Name',
-			// 'use_part_qty.required' => 'Please Enter Spare Part Quantity',
 		]);
 
 		if ($validator->fails()) {
@@ -3815,15 +3805,6 @@ class AdminAPIController extends Controller
 		}
 
 		$is_send_mail = isset($request->is_send_mail) ? $request->is_send_mail : 0;
-		$fileName = null;
-
-		if ($request->hasFile('image')) {
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/invoice/';
-			$file->move($path, $fileName);
-		}
-
 
 		$id = DB::table('invoice')->insertGetId([
 			'invoice_no' => $request->invoice_no,
@@ -3832,7 +3813,6 @@ class AdminAPIController extends Controller
 			'ship_to' => (!empty($request->ship_to)) ? $request->ship_to : NULL,
 			'bill_to' => (!empty($request->bill_to)) ? $request->bill_to : NULL,
 			'invoice_date' => date('Y-m-d', strtotime($request->invoice_date)),
-			'image' => $fileName,
 		]);
 
 		$total_amount = 0;
@@ -3857,14 +3837,14 @@ class AdminAPIController extends Controller
 		]);
 
 		if (!empty($id)) {
-
-			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
+			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email', 'users.bcc', 'users.cc')->first();
 			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
-				$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
+				$bccMails = isset($InvoiceData->bcc) && !empty($InvoiceData->bcc) ? explode(',', $InvoiceData->bcc) : NULL;
+				$ccMails = isset($InvoiceData->cc) && !empty($InvoiceData->cc) ? explode(',', $InvoiceData->cc) : NULL;
 
+				$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
 				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
 				$QrCode = QrCode::size(80)->generate($InvoiceUrl);
-
 				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
 
 				$mail = new PHPMailer(true);
@@ -3879,6 +3859,16 @@ class AdminAPIController extends Controller
 					$mail->Port = env('MAIL_PORT');
 					$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 					$mail->addAddress($InvoiceData->customer_email);
+					if (!empty($bccMails)) {
+						foreach ($bccMails as $bccmail) {
+							$mail->addBCC($bccmail);
+						}
+					}
+					if (!empty($ccMails)) {
+						foreach ($ccMails as $ccmail) {
+							$mail->addCC($ccmail);
+						}
+					}
 					$mail->isHTML(true);
 					$mail->Subject = "Invoice";
 					$mail->Body = $html;
@@ -3901,10 +3891,6 @@ class AdminAPIController extends Controller
 	{
 		if (Invoice::where('id', $id)->first()) {
 			$invoiceData = Invoice::where('id', $id)->first();
-			if (!empty($invoiceData->image)) {
-				$invoiceData->image_name = $invoiceData->image;
-				$invoiceData->image = asset('/storage/invoice/' . $invoiceData->image);
-			}
 			$userData = User::where('id', $invoiceData->customer_id)->first();
 			$invoiceData->customer_name = isset($userData->name) ? $userData->name : '';
 			$invoiceAry = array(
@@ -3949,8 +3935,6 @@ class AdminAPIController extends Controller
 			'qty' => 'required',
 			'rate' => 'required',
 			'description' => 'required',
-			// 'part_id' => 'required',
-			// 'use_part_qty' => 'required',
 		], [
 			'id.required' => 'ID Is Required',
 			'invoice_date.required' => 'Please Select Invoice Date',
@@ -3960,8 +3944,6 @@ class AdminAPIController extends Controller
 			'qty.required' => 'Please Enter Quantity',
 			'rate.required' => 'Please Enter Rate',
 			'description.required' => 'Please Enter Description',
-			// 'part_id.required' => 'Please Select Spare Part Name',
-			// 'use_part_qty.required' => 'Please Enter Spare Part Quantity',
 		]);
 
 		if ($validator->fails()) {
@@ -3969,16 +3951,6 @@ class AdminAPIController extends Controller
 		}
 
 		$is_send_mail = isset($request->is_send_mail) ? $request->is_send_mail : 0;
-
-		if ($request->hasFile('image')) {
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/invoice/';
-			$file->move($path, $fileName);
-			DB::table('invoice')->where("id", $request->id)->update([
-				'image' => $fileName,
-			]);
-		}
 
 		DB::table('invoice')->where("id", $request->id)->update([
 			'customer_id' => (!empty($request->customer_id)) ? $request->customer_id : 0,
@@ -4014,6 +3986,9 @@ class AdminAPIController extends Controller
 
 		$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $request->id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
 		if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
+			$bccMails = isset($InvoiceData->bcc) && !empty($InvoiceData->bcc) ? explode(',', $InvoiceData->bcc) : NULL;
+			$ccMails = isset($InvoiceData->cc) && !empty($InvoiceData->cc) ? explode(',', $InvoiceData->cc) : NULL;
+
 			$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
 			$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
 			$QrCode = QrCode::size(80)->generate($InvoiceUrl);
@@ -4031,6 +4006,16 @@ class AdminAPIController extends Controller
 				$mail->Port = env('MAIL_PORT');
 				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 				$mail->addAddress($InvoiceData->customer_email);
+				if (!empty($bccMails)) {
+					foreach ($bccMails as $bccmail) {
+						$mail->addBCC($bccmail);
+					}
+				}
+				if (!empty($ccMails)) {
+					foreach ($ccMails as $ccmail) {
+						$mail->addCC($ccmail);
+					}
+				}
 				$mail->isHTML(true);
 				$mail->Subject = "Invoice";
 				$mail->Body = $html;
@@ -4089,6 +4074,103 @@ class AdminAPIController extends Controller
 		}
 	}
 
+	public function SettlePayment(Request $request)
+	{
+
+		$validator = Validator::make($request->all(), [
+			'customer_id' => 'required',
+			'date' => 'required',
+			'type' => 'required',
+			'amount' => 'required',
+		], [
+			'customer_id.required' => 'Please Select Customer Name',
+			'date.required' => 'Please Select Date',
+			'type.required' => 'Please Enter Type',
+			'amount.required' => 'Please Enter Amount',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$in = $request->all();
+		$transaction_amount = isset($in['amount']) && !empty($in['amount']) ? $in['amount'] : 0;
+		$invoiceData = Invoice::where('transaction_type', 0)->where('customer_id', $in['customer_id'])->orderBy("id", "ASC")->select('id', 'sub_total', 'total_amount', 'remaining_amount', 'transaction_type')->get();
+
+		$subAmount = $transaction_amount;
+
+		if (!empty($invoiceData) && !empty($transaction_amount)) {
+
+			Transaction::insert([
+				'customer_id' => $in['customer_id'],
+				'date' => $in['date'],
+				'type' => $in['type'],
+				'desc' => isset($in['desc']) && !empty($in['desc']) ? $in['desc'] : NULL,
+				'amount' => $transaction_amount,
+				'status' => 1,
+				'created_at' => date('Y-m-d H:i:s'),
+				'updated_at' => date('Y-m-d H:i:s'),
+			]);
+
+			foreach ($invoiceData as $invoice) {
+				$remaining = !empty($invoice->remaining_amount) ? $invoice->remaining_amount : $invoice->total_amount;
+
+				if ($subAmount >= $remaining) {
+					$invoice->remaining_amount = 0;
+					$invoice->transaction_type = 1;
+					$subAmount -= $remaining;
+				} else {
+					$invoice->remaining_amount = $remaining - $subAmount;
+					$invoice->transaction_type = 0;
+					$subAmount = 0;
+				}
+				$invoice->save();
+
+				if ($subAmount <= 0) {
+					break;
+				}
+			}
+
+			return $this->response("Invoices updated.", true);
+		} else {
+			return $this->response("Not Found.", true);
+		}
+	}
+
+	public function TransactionSummary($id)
+	{
+		$userData = User::where('users.id', $id)->select(
+			'name',
+			'email',
+			'mobile',
+			DB::raw("CONCAT(billing_address, ', ', billing_landmark, ', ', billing_city, ', ', billing_state, ', ', billing_zipcode) AS bill_to"),
+			DB::raw("CONCAT(shipping_address, ', ', shipping_landmark, ', ', shipping_city, ', ', shipping_state, ', ', shipping_zipcode) AS ship_to")
+		)->first();
+
+		if (empty($userData)) {
+			return $this->response("Customer Not Found.", true);
+		}
+
+		$totalAmount = Invoice::where('customer_id', $id)->select(DB::raw("SUM(total_amount) as total_amount"))->first();
+		$totalTransactionAmount = Transaction::where('customer_id', $id)->select(DB::raw("SUM(amount) as total_amount"))->first();
+
+		$userData->total_amount = $total_amount = isset($totalAmount->total_amount) ? $totalAmount->total_amount : 0;
+		$userData->total_overdue_amount = isset($totalTransactionAmount->total_amount) ? ($total_amount - $totalTransactionAmount->total_amount) : 0;
+
+		$transactionList = Transaction::join('users', 'users.id', '=', 'transaction.customer_id')
+			->where('customer_id', $id)
+			->orderBy("transaction.id", "DESC")
+			->select('users.name as customer_name', 'transaction.date', 'transaction.type', 'transaction.desc', 'transaction.amount')
+			->get();
+
+		$data = array(
+			'userdata' => $userData,
+			'transactionList' => $transactionList,
+		);
+
+		return $this->response("", false, $data);
+	}
+
 
 
 	// Customers
@@ -4096,6 +4178,10 @@ class AdminAPIController extends Controller
 	{
 		$userList = User::where('status', 1)->paginate(100);
 		if (!empty($userList)) {
+			foreach ($userList as &$user) {
+				$user->bcc = (!empty($user->bcc)) ? explode(',', $user->bcc) : null;
+				$user->cc  = (!empty($user->cc))  ? explode(',', $user->cc)  : null;
+			}
 			return $this->response("", false, $userList);
 		} else {
 			return $this->response("Customer Not Found.", true);
@@ -4107,8 +4193,7 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'name' => 'required',
 			'mobile' => 'required|unique:users',
-			// 'email' => 'required|email|unique:users',
-			// 'password' => 'required|min:6',
+			'email' => 'required|email|unique:users',
 			'billing_address' => 'required',
 			// 'billing_landmark' => 'required',
 			'billing_city' => 'required',
@@ -4122,8 +4207,7 @@ class AdminAPIController extends Controller
 		], [
 			'name.required' => 'Please Enter Full Name',
 			'mobile.required' => 'Please Enter Mobile Number',
-			// 'email.required' => 'Please Enter Email ID',
-			// 'password.required' => 'Please Enter Password',
+			'email.required' => 'Please Enter Email ID',
 			'billing_address.required' => 'Please Enter Billing Address',
 			// 'billing_landmark.required' => 'Please Enter Billing Landmark',
 			'billing_city.required' => 'Please Enter Billing City',
@@ -4141,8 +4225,8 @@ class AdminAPIController extends Controller
 		}
 
 		$in = $request->all();
-		// $in['password'] = Hash::make($request->password);
-		// $in['visible_pass'] = $request->password;
+		$in['bcc'] = isset($request->bcc) && !empty($request->bcc) ? implode(',', $request->bcc) : NULL;
+		$in['cc'] = isset($request->cc) && !empty($request->cc) ? implode(',', $request->cc) : NULL;
 		$userData = User::create($in);
 
 		if (!empty($userData)) {
@@ -4158,8 +4242,7 @@ class AdminAPIController extends Controller
 			'id' => 'required',
 			'name' => 'required',
 			'mobile' => 'required|unique:users,mobile,' . $request->id,
-			// 'email' => 'required|email|unique:users,email,' . $request->id,
-			// 'password' => 'required|min:6',
+			'email' => 'required|email|unique:users,email,' . $request->id,
 			'billing_address' => 'required',
 			// 'billing_landmark' => 'required',
 			'billing_city' => 'required',
@@ -4174,8 +4257,7 @@ class AdminAPIController extends Controller
 			'id.required' => 'ID is Required',
 			'name.required' => 'Please Enter Full Name',
 			'mobile.required' => 'Please Enter Mobile Number',
-			// 'email.required' => 'Please Enter Email ID',
-			// 'password.required' => 'Please Enter Password',
+			'email.required' => 'Please Enter Email ID',
 			'billing_address.required' => 'Please Enter Billing Address',
 			// 'billing_landmark.required' => 'Please Enter Billing Landmark',
 			'billing_city.required' => 'Please Enter Billing City',
@@ -4193,8 +4275,8 @@ class AdminAPIController extends Controller
 		}
 
 		$in = $request->all();
-		// $in['password'] = Hash::make($request->password);
-		// $in['visible_pass'] = $request->password;
+		$in['bcc'] = isset($request->bcc) && !empty($request->bcc) ? implode(',', $request->bcc) : NULL;
+		$in['cc'] = isset($request->cc) && !empty($request->cc) ? implode(',', $request->cc) : NULL;
 		$userData = User::where('id', $request->id)->first();
 		unset($in['id']);
 		$userData->update($in);

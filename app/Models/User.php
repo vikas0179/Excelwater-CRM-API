@@ -27,5 +27,7 @@ class User extends Authenticatable
         'shipping_city',
         'shipping_state',
         'shipping_zipcode',
+        'bcc',
+        'cc',
     ];
 }

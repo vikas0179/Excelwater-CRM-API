@@ -149,6 +149,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		// Route::post('check_use_parts', [AdminAPIController::class, 'check_use_parts']);
 		Route::post('change_void_status', [AdminAPIController::class, 'ChangeVoidStatus']);
 		Route::post('invoice_send_mail', [AdminAPIController::class, 'invoiceMailSend']);
+		Route::post('settle_payment', [AdminAPIController::class, 'SettlePayment']);
+		Route::get('transaction_summary/{id}', [AdminAPIController::class, 'TransactionSummary']);
 
 		// Users
 		Route::get('get_users', [AdminAPIController::class, 'GetUsers']);

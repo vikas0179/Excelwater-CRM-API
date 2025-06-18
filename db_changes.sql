@@ -172,3 +172,29 @@ ALTER TABLE `supplier` ADD `spare_part_ids` text NULL AFTER `updated_at`;
 
 -- 6-6-2025
 ALTER TABLE `invoice` ADD `void_status` tinyint(2) NOT NULL DEFAULT '0' COMMENT '0=>Off, 1=>On';
+
+-- 17-06-2025
+ALTER TABLE `invoice`
+CHANGE `customer_id` `customer_id` int NULL AFTER `updated_at`,
+CHANGE `invoice_no` `invoice_no` int NULL AFTER `ship_to`;
+
+CREATE TABLE `transaction` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` int(11) NULL,
+  `date` date NULL,
+  `type` varchar(256) NULL,
+  `desc` text NULL,
+  `amount` float NULL,
+  `status` tinyint(2) NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL,
+  `updated_at` timestamp NULL
+);
+
+ALTER TABLE `invoice`
+ADD `remaining_amount` float NULL AFTER `total_amount`,
+ADD `transaction_type` tinyint(2) NOT NULL DEFAULT '0' COMMENT '0=>Pending, 1=>Settle' AFTER `remaining_amount`;
+
+-- 18-06-2025
+ALTER TABLE `users`
+ADD `bcc` text COLLATE 'utf8mb4_unicode_ci' NULL AFTER `shipping_zipcode`,
+ADD `cc` text COLLATE 'utf8mb4_unicode_ci' NULL AFTER `bcc`;
