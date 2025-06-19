@@ -3489,7 +3489,6 @@ class AdminAPIController extends Controller
 			'item' => 'required',
 			'desc' => 'required',
 			'qty' => 'required',
-			'rate' => 'required',
 			'description' => 'required',
 		], [
 			'supplier_id.required' => 'Please Select Supplier Name',
@@ -3497,7 +3496,6 @@ class AdminAPIController extends Controller
 			'item.required' => 'Please Enter Item',
 			'desc.required' => 'Please Enter Desc',
 			'qty.required' => 'Please Enter Quantity',
-			'rate.required' => 'Please Enter Rate',
 			'description' => 'Please Enter Description',
 		]);
 
@@ -3509,37 +3507,19 @@ class AdminAPIController extends Controller
 			'supplier_id' => $request->supplier_id,
 			'desc' => $request->description,
 			'order_id' => time() . rand(1, 1000),
+			'order_number' => "P0" . date("dmY") . date("i"),
 		]);
 
-		$total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
-
 				DB::table('order_item')->insert([
 					'order_id' => $id,
 					'item' => $item,
 					'desc' => $request->desc[$key],
 					'qty' => $request->qty[$key],
-					'rate' => $request->rate[$key],
-					'amount' => ($request->qty[$key] * $request->rate[$key]),
 				]);
-
-				DB::table('stocks')->insert([
-					'order_id' => $id,
-					'supplier_id' => $request->supplier_id,
-					'spare_id' => $request->spare_id[$key],
-					'qty' => $request->qty[$key],
-					'price' => $request->rate[$key],
-					'total_amount' => ($request->qty[$key] * $request->rate[$key]),
-				]);
-				$total_amount += ($request->qty[$key] * $request->rate[$key]);
 			}
 		}
-
-		DB::table('order')->where("id", $id)->update([
-			'sub_total' => $total_amount,
-			'total_amount' => $total_amount,
-		]);
 
 		if (!empty($id)) {
 			return $this->response("Raw Material Order Add Successfully.", false);
@@ -3635,7 +3615,7 @@ class AdminAPIController extends Controller
 			'item' => 'required',
 			'desc' => 'required',
 			'qty' => 'required',
-			'rate' => 'required',
+			// 'rate' => 'required',
 			'description' => 'required',
 		], [
 			'id.required' => 'ID is Required',
@@ -3644,7 +3624,7 @@ class AdminAPIController extends Controller
 			'item.required' => 'Please Enter Item',
 			'desc.required' => 'Please Enter Desc',
 			'qty.required' => 'Please Enter Quantity',
-			'rate.required' => 'Please Enter Rate',
+			// 'rate.required' => 'Please Enter Rate',
 			'description' => 'Please Enter Description',
 		]);
 
@@ -3658,9 +3638,9 @@ class AdminAPIController extends Controller
 		]);
 
 		DB::table('order_item')->where('order_id', $request->id)->delete();
-		DB::table('stocks')->where('order_id', $request->id)->delete();
+		// DB::table('stocks')->where('order_id', $request->id)->delete();
 
-		$total_amount = 0;
+		// $total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
 				DB::table('order_item')->insert([
@@ -3668,26 +3648,27 @@ class AdminAPIController extends Controller
 					'item' => $item,
 					'desc' => $request->desc[$key],
 					'qty' => $request->qty[$key],
-					'rate' => $request->rate[$key],
-					'amount' => ($request->qty[$key] * $request->rate[$key]),
+					// 'rate' => $request->rate[$key],
+					// 'amount' => ($request->qty[$key] * $request->rate[$key]),
 				]);
 
-				DB::table('stocks')->insert([
-					'order_id' => $request->id,
-					'supplier_id' => $request->supplier_id,
-					'spare_id' => $request->spare_id[$key],
-					'qty' => $request->qty[$key],
-					'price' => $request->rate[$key],
-					'total_amount' => ($request->qty[$key] * $request->rate[$key]),
-				]);
-				$total_amount += ($request->qty[$key] * $request->rate[$key]);
+				// DB::table('stocks')->insert([
+				// 	'order_id' => $request->id,
+				// 	'supplier_id' => $request->supplier_id,
+				// 	'spare_id' => $request->spare_id[$key],
+				// 	'qty' => $request->qty[$key],
+				// 	'price' => $request->rate[$key],
+				// 	'total_amount' => ($request->qty[$key] * $request->rate[$key]),
+				// ]);
+
+				// $total_amount += ($request->qty[$key] * $request->rate[$key]);
 			}
 		}
 
-		DB::table('order')->where("id", $request->id)->update([
-			'sub_total' => $total_amount,
-			'total_amount' => $total_amount,
-		]);
+		// DB::table('order')->where("id", $request->id)->update([
+		// 	'sub_total' => $total_amount,
+		// 	'total_amount' => $total_amount,
+		// ]);
 
 		return $this->response("Raw Material Order Update Successfully.", false);
 	}
@@ -4143,8 +4124,8 @@ class AdminAPIController extends Controller
 			'name',
 			'email',
 			'mobile',
-			DB::raw("CONCAT(billing_address, ', ', billing_landmark, ', ', billing_city, ', ', billing_state, ', ', billing_zipcode) AS bill_to"),
-			DB::raw("CONCAT(shipping_address, ', ', shipping_landmark, ', ', shipping_city, ', ', shipping_state, ', ', shipping_zipcode) AS ship_to")
+			DB::raw("CONCAT_WS(', ', billing_address, billing_landmark, billing_city, billing_state, billing_zipcode) AS bill_to"),
+			DB::raw("CONCAT_WS(', ', shipping_address, shipping_landmark, shipping_city, shipping_state, shipping_zipcode) AS bill_to"),
 		)->first();
 
 		if (empty($userData)) {

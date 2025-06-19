@@ -198,3 +198,7 @@ ADD `transaction_type` tinyint(2) NOT NULL DEFAULT '0' COMMENT '0=>Pending, 1=>S
 ALTER TABLE `users`
 ADD `bcc` text COLLATE 'utf8mb4_unicode_ci' NULL AFTER `shipping_zipcode`,
 ADD `cc` text COLLATE 'utf8mb4_unicode_ci' NULL AFTER `bcc`;
+
+-- 19-06-2025
+
+ALTER TABLE `order` ADD `order_number` varchar(256) COLLATE 'utf8mb4_0900_ai_ci' NULL AFTER `order_id`;
