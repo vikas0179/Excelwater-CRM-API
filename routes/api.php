@@ -25,7 +25,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 	Route::post('login', [AdminAPIController::class, 'login']);
 	Route::post('/', [AdminAPIController::class, 'login']);
 
-
 	Route::post('forgot-password', [AdminAPIController::class, 'forgot_password']);
 	Route::post('verify-token', [AdminAPIController::class, 'verify_token']);
 	Route::post('reset-password', [AdminAPIController::class, 'reset_password']);
@@ -158,6 +157,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('edit_user', [AdminAPIController::class, 'EditUser']);
 		Route::post('delete_user', [AdminAPIController::class, 'DeleteUser']);
 		Route::get('dashboard_all_count', [AdminAPIController::class, 'DashboardAllCount']);
+
+		// Employee
+		Route::get('get_employee', [AdminAPIController::class, 'GetEmployee']);
+		Route::post('add_employee', [AdminAPIController::class, 'AddEmployee']);
+		Route::post('delete_employee', [AdminAPIController::class, 'DeleteEmployee']);
+		Route::post('edit_employee', [AdminAPIController::class, 'EditEmployee']);
+		Route::post('change_employee_status', [AdminAPIController::class, 'ChangeEmployeeStatus']);
 
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
 	});

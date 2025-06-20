@@ -193,10 +193,20 @@ class AdminAPIController extends Controller
 
 		$user =  auth()->user();
 
+		if ($user->role == 0) {
+			$user_type  = "Super Admin";
+		} elseif ($user->role == 1) {
+			$user_type  = "Admin";
+		} else {
+			$user_type  = "Sales";
+		}
+
 		return array(
 			"token" => $token,
 			"name" => "{$user->name}",
-			"email" => $user->email
+			"email" => $user->email,
+			"user_role" => $user->role,
+			"user_type" => $user_type,
 		);
 	}
 
@@ -2898,6 +2908,15 @@ class AdminAPIController extends Controller
 
 
 
+
+
+
+
+
+
+
+
+
 	// Suppliers 
 	public function get_suppliers()
 	{
@@ -3681,12 +3700,14 @@ class AdminAPIController extends Controller
 			'invoice_file' => 'required',
 			'delivery_qty' => 'required',
 			'order_item_id' => 'required',
+			'rate' => 'required',
 		], [
 			'id.required' => 'Order ID is required',
 			'invoice_desc.required' => 'Invoice Description is required',
 			'invoice_file.required' => 'Invoice File is required',
 			'delivery_qty.required' => 'Delivery Quantity is required',
 			'order_item_id.required' => 'Order Item ID is required',
+			'rate.required' => 'Rate is required',
 		]);
 
 		if ($validator->fails()) {
@@ -3707,18 +3728,28 @@ class AdminAPIController extends Controller
 
 		$order_item_ids = (array) $request->order_item_id;
 		$delivery_qtys = (array) $request->delivery_qty;
+		$rates = (array) $request->rate;
 
+		$total_amount = 0;
 		if (!empty($order_item_ids)) {
 			foreach ($order_item_ids as $key => $item_id) {
 				$qty = $delivery_qtys[$key] ?? null;
+				$rate = $rates[$key] ?? null;
 				if ($qty !== null) {
-					DB::table('order_item')->where("id", $item_id)->update([
-						'delivery_qty' => $qty,
-					]);
+					$OrderItemData = \App\Models\OrderItem::find($item_id);
+					$OrderItemData->delivery_qty = $qty;
+					$OrderItemData->rate = $rate;
+					$OrderItemData->amount = ($rate * $qty);
+					$total_amount += ($rate * $qty);
+					$OrderItemData->save();
 				}
 			}
 		}
 
+		DB::table('order')->where("id", $request->id)->update([
+			'sub_total' => $total_amount,
+			'total_amount' => $total_amount
+		]);
 
 		return $this->response("Raw Material Order details updated successfully.", false);
 	}
@@ -4112,7 +4143,7 @@ class AdminAPIController extends Controller
 				}
 			}
 
-			return $this->response("Invoices updated.", true);
+			return $this->response("Invoices updated.", false);
 		} else {
 			return $this->response("Not Found.", true);
 		}
@@ -4371,5 +4402,111 @@ class AdminAPIController extends Controller
 		} else {
 			return $this->response(null, true);
 		}
+	}
+
+
+
+	// Employee
+	public function GetEmployee()
+	{
+		$user = auth()->user();
+		if ($user->role != 0) {
+			return $this->response("Access denied", true);
+		}
+		$AdminList = Admin::where('role', 1)->paginate(20);
+		if (!empty($AdminList) && count($AdminList) > 0) {
+			return $this->response("", false, $AdminList);
+		} else {
+			return $this->response("Employee Not Found!", true);
+		}
+	}
+
+	public function AddEmployee(Request $request)
+	{
+
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'email' => 'required|email|unique:admin',
+			'password' => 'required',
+		], [
+			'name.required' => 'Please Enter Name',
+			'email.required' => 'Please Enter Email ID',
+			'password.required' => 'Please Enter Password',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$admin = new Admin();
+		$admin->name = $request->name;
+		$admin->email = $request->email;
+		$admin->password = Hash::make($request->password);
+		$admin->role = 1;
+		$admin->status = 1;
+		$admin->save();
+		return $this->response("Added Employee Successfully", false);
+	}
+
+	public function EditEmployee(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'email' => 'required|email|unique:admin,email,' . $request->id,
+			'password' => 'required',
+		], [
+			'id.required' => 'Please Enter ID',
+			'name.required' => 'Please Enter Name',
+			'email.required' => 'Please Enter Email ID',
+			'password.required' => 'Please Enter Password',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		Admin::where("id", $request->id)->update([
+			'name' => $request->name,
+			'email' => $request->email,
+			'password' => Hash::make($request->password),
+		]);
+		return $this->response("Update Employee Successfully", false);
+	}
+
+	public function DeleteEmployee(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+		], [
+			'id.required' => 'Please Enter ID',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		Admin::where('id', $request->id)->delete();
+		return $this->response("Admin Delete Successfully");
+	}
+
+	public function ChangeEmployeeStatus(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'status' => 'required',
+		], [
+			'id.required' => 'Please Enter ID',
+			'status.required' => 'Please Change Status',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		Admin::where("id", $request->id)->update([
+			'status' => isset($request->status) ? $request->status : 0,
+		]);
+		return $this->response("Status Change Successfully", false);
 	}
 }
