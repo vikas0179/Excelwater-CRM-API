@@ -120,7 +120,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('edit_product_master', [AdminAPIController::class, 'edit_product_master']);
 		Route::post('delete_product_master', [AdminAPIController::class, 'delete_product_master']);
 		Route::get('get_product_master/{id}', [AdminAPIController::class, 'get_product_master']);
-		Route::post('get_all_ptoduct', [AdminAPIController::class, 'get_all_ptoduct']);
+		Route::post('get_all_ptoduct', [AdminAPIController::class, 'get_all_product']);
 
 		// Spare Parts
 		Route::get('spare_parts', [AdminAPIController::class, 'spare_parts']);
@@ -164,6 +164,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('delete_employee', [AdminAPIController::class, 'DeleteEmployee']);
 		Route::post('edit_employee', [AdminAPIController::class, 'EditEmployee']);
 		Route::post('change_employee_status', [AdminAPIController::class, 'ChangeEmployeeStatus']);
+
+		// Product Store
+		Route::post('get_product_store', [AdminAPIController::class, 'GetProductStore']);
+		Route::post('add_product_store', [AdminAPIController::class, 'AddProductStore']);
 
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
 	});

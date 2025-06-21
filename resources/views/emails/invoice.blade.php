@@ -64,6 +64,7 @@
                             <th style="padding: 8px; text-align: right;">Qty</th>
                             <th style="padding: 8px; text-align: right;">Rate</th>
                             <th style="padding: 8px; text-align: right;">Tax</th>
+                            <th style="padding: 8px; text-align: right;">Tax Amount</th>
                             <th style="padding: 8px; text-align: right;">Amount</th>
                         </tr>
                     </thead>
@@ -75,15 +76,20 @@
                                     $qty = isset($val->qty) ? $val->qty : 0;
                                     $rate = isset($val->rate) ? $val->rate : 0;
                                     $Amount = $qty * $rate;
+                                    $tax_amount = (13 / 100) * $Amount;
                                     $totalAmount += $qty * $rate;
                                 @endphp
                                 <tr>
-                                    <td><?= isset($val->item) ? $val->item : '' ?></td>
+                                    <td>
+                                        <?= isset($val->item) ? $val->item : '' ?> <br>
+                                        {{ isset($val->product_code) ? $val->product_code : '' }}
+                                    </td>
                                     <td><?= isset($val->desc) ? $val->desc : '' ?></td>
                                     <td><?= $qty ?></td>
                                     <td><?= '$' . $rate ?></td>
                                     <td>HST ON</td>
-                                    <td><?= '$' . $Amount ?></td>
+                                    <td>{{ '$' . $tax_amount }}</td>
+                                    <td><?= '$' . ($Amount + $tax_amount) ?></td>
                                 </tr>
                             @endforeach
                         @endif
@@ -104,9 +110,6 @@
 
         </div>
         <div style="border: 1px solid #1F2937; padding: 15px; display:flex; justify-content:space-between">
-            <div>
-                <?= $QrCode ?>
-            </div>
             <div style="display:flex; align-items: center;">
                 <a href="<?= $InvoiceUrl ?>"
                     style="text-decoration: none; background-color: #2563EB; color: #FFFFFF; padding: 8px 16px; border-radius: 4px;">Invoice</a>

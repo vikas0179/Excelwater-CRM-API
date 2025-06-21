@@ -202,3 +202,18 @@ ADD `cc` text COLLATE 'utf8mb4_unicode_ci' NULL AFTER `bcc`;
 -- 19-06-2025
 
 ALTER TABLE `order` ADD `order_number` varchar(256) COLLATE 'utf8mb4_0900_ai_ci' NULL AFTER `order_id`;
+
+-- 20-06-2025
+
+CREATE TABLE `product_stock` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `product_id` int(11) NULL,
+  `product_code` varchar(256) NULL,
+  `qty` int(11) NULL,
+  `status` tinyint(2) NOT NULL DEFAULT '0' COMMENT '0=> Not Use, 1=>Use',
+  `created_at` timestamp NULL,
+  `updated_at` timestamp NULL
+);
+
+
+ALTER TABLE `invoice_item` ADD `product_stock_id` int NULL AFTER `product_id`;

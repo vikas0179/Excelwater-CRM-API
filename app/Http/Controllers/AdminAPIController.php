@@ -33,6 +33,7 @@ use App\Models\LeadsDuplicateTracking;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductMaster;
+use App\Models\ProductStock;
 use App\Models\SpareParts;
 use App\Models\Stocks;
 use App\Models\Supplier;
@@ -44,6 +45,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Carbon\Carbon;
 use DateTime;
+use League\CommonMark\Node\Query\OrExpr;
 use PHPMailer\PHPMailer\PHPMailer;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -3092,12 +3094,18 @@ class AdminAPIController extends Controller
 	// Product Mastre
 	public function product_master()
 	{
-		$ProductMasterList = ProductMaster::paginate(100);
+		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
+			->select('product_master.*', DB::raw("SUM(invoice_item.amount) as final_price"))
+			->groupBy('product_master.id')
+			->paginate(100);
+
 		if (!empty($ProductMasterList)) {
 			foreach ($ProductMasterList as $ProductMaster) {
 				$ProductMaster->image = asset('/storage/product_master/' . $ProductMaster->image);
 				$ProductMaster->spare_part = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
 				unset($ProductMaster['spare_parts']);
+				$ProductStockList = ProductStock::where('product_id', $ProductMaster->id)->get();
+				$ProductMaster->product_stock_list = $ProductStockList;
 			}
 		}
 
@@ -3264,7 +3272,7 @@ class AdminAPIController extends Controller
 		}
 	}
 
-	public function get_all_ptoduct()
+	public function get_all_product()
 	{
 		$ProductList = ProductMaster::select('id', 'product_name', 'price')->get();
 		if (!empty($ProductList)) {
@@ -3830,9 +3838,14 @@ class AdminAPIController extends Controller
 		$total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
+				$product_stock_id = (isset($request->product_stock_id[$key]) && !empty($request->product_stock_id[$key])) ? $request->product_stock_id[$key] : NULL;
+				if (!empty($product_stock_id)) {
+					ProductStock::where('id', $product_stock_id)->update(['status' => 1]);
+				}
 				DB::table('invoice_item')->insert([
 					'invoice_id' => $id,
 					'product_id' => $request->product_id[$key],
+					'product_stock_id' => $product_stock_id,
 					'item' => $item,
 					'desc' => $request->desc[$key],
 					'qty' => $request->qty[$key],
@@ -3853,11 +3866,10 @@ class AdminAPIController extends Controller
 			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
 				$bccMails = isset($InvoiceData->bcc) && !empty($InvoiceData->bcc) ? explode(',', $InvoiceData->bcc) : NULL;
 				$ccMails = isset($InvoiceData->cc) && !empty($InvoiceData->cc) ? explode(',', $InvoiceData->cc) : NULL;
-
-				$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
+				$InvoiceItemsData = InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_item.invoice_id', $InvoiceData->id)->select('invoice_item.*', 'product_stock.product_code')->get();
 				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
-				$QrCode = QrCode::size(80)->generate($InvoiceUrl);
-				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
+				// $QrCode = QrCode::size(80)->generate($InvoiceUrl);
+				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
 
 				$mail = new PHPMailer(true);
 				try {
@@ -3907,7 +3919,7 @@ class AdminAPIController extends Controller
 			$invoiceData->customer_name = isset($userData->name) ? $userData->name : '';
 			$invoiceAry = array(
 				'invoice' => $invoiceData,
-				'invoice_detail' => InvoiceItem::where('invoice_id', $id)->get(),
+				'invoice_detail' => InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_id', $id)->select('invoice_item.*', 'product_stock.product_code')->get(),
 			);
 			return $this->response("", false, $invoiceAry);
 		} else {
@@ -3978,9 +3990,14 @@ class AdminAPIController extends Controller
 		$total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
+				$product_stock_id = (isset($request->product_stock_id[$key]) && !empty($request->product_stock_id[$key])) ? $request->product_stock_id[$key] : NULL;
+				if (!empty($product_stock_id)) {
+					ProductStock::where('id', $product_stock_id)->update(['status' => 1]);
+				}
 				DB::table('invoice_item')->insert([
 					'invoice_id' => $request->id,
 					'product_id' => $request->product_id[$key],
+					'product_stock_id' => $product_stock_id,
 					'item' => $item,
 					'desc' => $request->desc[$key],
 					'qty' => $request->qty[$key],
@@ -4508,5 +4525,69 @@ class AdminAPIController extends Controller
 			'status' => isset($request->status) ? $request->status : 0,
 		]);
 		return $this->response("Status Change Successfully", false);
+	}
+
+	public function exit_product_stock_code()
+	{
+		$code = 'PSC' . str_pad(random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+		$ExitProductStock = ProductStock::where('product_code', $code)->first();
+		if (!empty($ExitProductStock)) {
+			$code = $this->exit_product_stock_code();
+		}
+		return $code;
+	}
+
+	public function AddProductStore(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'product_id' => 'required',
+			'qty' => 'required|integer|min:1',
+
+		], [
+			'product_id.required' => 'Please Enter Product  ID',
+			'qty.required' => 'Please Enter Quantity',
+			'qty.min' => 'Quantity must be at least 1.',
+			'qty.integer' => 'Quantity must be a valid integer.'
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$qty = isset($request->qty) ? $request->qty : 0;
+		if (!empty($qty)) {
+			for ($i = 1; $i <= $qty; $i++) {
+				$productCode = $this->exit_product_stock_code();
+
+				$productstock = new ProductStock();
+				$productstock->product_id = $request->product_id;
+				$productstock->product_code = $productCode;
+				$productstock->qty = 1;
+				$productstock->status = 0;
+				$productstock->save();
+			}
+		}
+		return $this->response("Add  Successfully", false);
+	}
+
+	public function GetProductStore(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'product_id' => 'required',
+
+		], [
+			'product_id.required' => 'Please Enter Product ID',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$ProductStock = ProductStock::where('product_id', $request->product_id)->where('status', 0)->select('product_code', 'id')->get();
+		if (!empty($ProductStock) && count($ProductStock) > 0) {
+			return $this->response("", false, $ProductStock);
+		} else {
+			return $this->response("Product Stock Not Found", true);
+		}
 	}
 }
