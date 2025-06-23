@@ -3104,7 +3104,14 @@ class AdminAPIController extends Controller
 				$ProductMaster->image = asset('/storage/product_master/' . $ProductMaster->image);
 				$ProductMaster->spare_part = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
 				unset($ProductMaster['spare_parts']);
+				$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
+				$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
 				$ProductStockList = ProductStock::where('product_id', $ProductMaster->id)->get();
+				if (!empty($ProductStockList)) {
+					foreach ($ProductStockList as &$stock) {
+						$stock->status = isset($stock->status) && $stock->status == 1 ? "Sell" : "Not Sell";
+					}
+				}
 				$ProductMaster->product_stock_list = $ProductStockList;
 			}
 		}
@@ -4184,7 +4191,7 @@ class AdminAPIController extends Controller
 		$totalTransactionAmount = Transaction::where('customer_id', $id)->select(DB::raw("SUM(amount) as total_amount"))->first();
 
 		$userData->total_amount = $total_amount = isset($totalAmount->total_amount) ? $totalAmount->total_amount : 0;
-		$userData->total_overdue_amount = isset($totalTransactionAmount->total_amount) ? ($total_amount - $totalTransactionAmount->total_amount) : 0;
+		$userData->total_overdue_amount = isset($totalTransactionAmount->total_amount) ? ($total_amount - $totalTransactionAmount->total_amount) : $total_amount;
 
 		$transactionList = Transaction::join('users', 'users.id', '=', 'transaction.customer_id')
 			->where('customer_id', $id)
