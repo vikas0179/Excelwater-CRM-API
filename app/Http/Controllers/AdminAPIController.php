@@ -3281,15 +3281,13 @@ class AdminAPIController extends Controller
 
 	public function get_all_product()
 	{
-		$ProductList = ProductMaster::select('id', 'product_name', 'price')->get();
+		$ProductList = ProductMaster::select('id', 'product_name', 'desc', 'price')->get();
 		if (!empty($ProductList)) {
 			return $this->response("", false, $ProductList);
 		} else {
 			return $this->response("Product Part Found.", true);
 		}
 	}
-
-
 
 	// Spare Part
 
@@ -3778,7 +3776,7 @@ class AdminAPIController extends Controller
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
-				$invoice->invoice_detail = InvoiceItem::where('invoice_id', $invoice->id)->get();
+				$invoice->invoice_detail = InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_item.invoice_id', $invoice->id)->select('invoice_item.*', 'product_stock.product_code', 'product_stock.id as product_code_id')->get();
 			}
 		}
 		if (!empty($invoices)) {
@@ -3793,7 +3791,7 @@ class AdminAPIController extends Controller
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
-				$invoice->invoice_detail = InvoiceItem::where('invoice_id', $invoice->id)->get();
+				$invoice->invoice_detail = InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_item.invoice_id', $invoice->id)->select('invoice_item.*', 'product_stock.product_code', 'product_stock.id as product_code_id')->get();
 			}
 		}
 		if (!empty($invoices)) {

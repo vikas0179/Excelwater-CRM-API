@@ -20,6 +20,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 	Route::post('leads/save', [AdminAPIController::class, 'lead_save']);
 
+	Route::post('get_invoice_detail_old', [HomeController::class, 'GetInvoiceDetailOld']);
 	Route::post('get_invoice_detail', [HomeController::class, 'GetInvoiceDetail']);
 
 	Route::post('login', [AdminAPIController::class, 'login']);
