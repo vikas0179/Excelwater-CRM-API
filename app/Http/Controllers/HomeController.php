@@ -89,7 +89,7 @@ class HomeController extends Controller
             return $this->response($validator->errors()->first(), true);
         }
 
-        $ProductStockData = ProductStock::where('product_code', $request->product_code)->select('id', 'product_id', 'product_code')->first();
+        $ProductStockData = ProductStock::where('product_code', $request->product_code)->select('id', 'product_id', 'product_code')->where('status', 1)->first();
         if (!empty($ProductStockData)) {
             $InvoiceItemData = InvoiceItem::where('product_stock_id', $ProductStockData->id)->select('item', 'desc', 'qty', 'rate', 'amount', 'invoice_id')->first();
             $InvoiceData = Invoice::where('id', $InvoiceItemData->invoice_id)->select('id', 'created_at', 'bill_to', 'ship_to', 'invoice_no', 'invoice_date', 'total_amount', 'customer_id')->first();
@@ -107,10 +107,9 @@ class HomeController extends Controller
             ];
             return $this->response("", false, $data);
         } else {
-            return $this->response("", true);
+            return $this->response("Not Found Data", true);
         }
 
-        // Fetch invoice data including customer_id
         $InvoiceData = Invoice::where('invoice_no', $request->invoice_no)->select('id', 'created_at', 'bill_to', 'ship_to', 'invoice_no', 'invoice_date', 'total_amount', 'customer_id')->first();
 
         if (!empty($InvoiceData)) {
