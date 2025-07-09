@@ -3106,7 +3106,7 @@ class AdminAPIController extends Controller
 				unset($ProductMaster['spare_parts']);
 				$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
 				$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
-				$ProductStockList = ProductStock::where('product_id', $ProductMaster->id)->get();
+				$ProductStockList = ProductStock::where('product_id', $ProductMaster->id)->orderBy("status", "asc")->get();
 				if (!empty($ProductStockList)) {
 					foreach ($ProductStockList as &$stock) {
 						$stock->status = isset($stock->status) && $stock->status == 1 ? "Sell" : "Not Sell";
@@ -3128,6 +3128,7 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'product_name' => 'required',
 			'product_code' => 'required',
+			'min_alert_qty' => 'required',
 			'price' => 'required',
 			'desc' => 'required',
 			'image' => 'required',
@@ -3137,6 +3138,7 @@ class AdminAPIController extends Controller
 		], [
 			'product_name.required' => 'Please Enter Product Name',
 			'product_code.required' => 'Please Enter Product Code',
+			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'price.required' => 'Please Enter Price',
 			'desc.required' => 'Please Enter Description',
 			'image.required' => 'Please Select Image',
@@ -3175,6 +3177,7 @@ class AdminAPIController extends Controller
 			'desc' => $request->desc,
 			'image' => $fileName,
 			'spare_parts' => $json_item,
+			'min_alert_qty' => $request->min_alert_qty,
 		]);
 
 		if ($last_id == true) {
@@ -3190,6 +3193,7 @@ class AdminAPIController extends Controller
 			'id' => 'required',
 			'product_name' => 'required',
 			'product_code' => 'required',
+			'min_alert_qty' => 'required',
 			'price' => 'required',
 			'desc' => 'required',
 			'spare_parts_id' => 'required',
@@ -3199,6 +3203,7 @@ class AdminAPIController extends Controller
 			'id.required' => 'ID Is Required',
 			'product_name.required' => 'Please Enter Product Name',
 			'product_code.required' => 'Please Enter Product Code',
+			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'price.required' => 'Please Enter Price',
 			'desc.required' => 'Please Enter Description',
 			'spare_parts_id.required' => 'Please Select Raw Material Name',
@@ -3239,6 +3244,7 @@ class AdminAPIController extends Controller
 			'price' => $request->price,
 			'desc' => $request->desc,
 			'spare_parts' => $json_item,
+			'min_alert_qty' => $request->min_alert_qty,
 		]);
 		return $this->response("Product Update Successfully.", false);
 	}
@@ -3503,7 +3509,7 @@ class AdminAPIController extends Controller
 		$supplierData = Supplier::where('id', $request->id)->select('spare_part_ids')->first();
 
 		if (!empty($supplierData->spare_part_ids)) {
-			$data = SpareParts::whereIn("id", explode(',', $supplierData->spare_part_ids))->select('id', 'part_name', 'price')->get();
+			$data = SpareParts::whereIn("id", explode(',', $supplierData->spare_part_ids))->select('id', 'part_name', 'price', 'desc')->get();
 			return $this->response("", false, $data);
 		} else {
 			return $this->response("Not Found Raw Material!", true);
@@ -3535,11 +3541,21 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
+		$LastRecordCheck = Order::whereDate('created_at', date('Y-m-d'))->orderBy("id", "DESC")->first();
+
+		if (empty($LastRecordCheck)) {
+			$GenerateORderNumber = "P" . date("dmY") . "01";
+		} else {
+			$orderNumber = substr($LastRecordCheck->order_number, 9);
+			$IncreseOrderNumber = str_pad(((int)$orderNumber + 1), strlen($orderNumber), '0', STR_PAD_LEFT);
+			$GenerateORderNumber = "P" . date("dmY") . $IncreseOrderNumber;
+		}
+
 		$id = DB::table('order')->insertGetId([
 			'supplier_id' => $request->supplier_id,
 			'desc' => $request->description,
 			'order_id' => time() . rand(1, 1000),
-			'order_number' => "P0" . date("dmY") . date("i"),
+			'order_number' => $GenerateORderNumber,
 		]);
 
 		if (!empty($request->item)) {
@@ -3736,7 +3752,8 @@ class AdminAPIController extends Controller
 
 		DB::table('order')->where("id", $request->id)->update([
 			'invoice_desc' => $request->invoice_desc,
-			'invoice_file' => $fileName
+			'invoice_file' => $fileName,
+			'delivery_date' => date("Y-m-d"),
 		]);
 
 		$order_item_ids = (array) $request->order_item_id;
@@ -3752,6 +3769,7 @@ class AdminAPIController extends Controller
 					$OrderItemData = \App\Models\OrderItem::find($item_id);
 					$OrderItemData->delivery_qty = $qty;
 					$OrderItemData->rate = $rate;
+					$OrderItemData->status = 1;
 					$OrderItemData->amount = ($rate * $qty);
 					$total_amount += ($rate * $qty);
 					$OrderItemData->save();

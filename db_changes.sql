@@ -217,3 +217,9 @@ CREATE TABLE `product_stock` (
 
 
 ALTER TABLE `invoice_item` ADD `product_stock_id` int NULL AFTER `product_id`;
+
+-- 09-07-2025
+
+ALTER TABLE `order` ADD `delivery_date` date NULL AFTER `invoice_file`;
+
+ALTER TABLE `product_master` ADD `min_alert_qty` int(11) NULL AFTER `price`;
