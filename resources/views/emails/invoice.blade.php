@@ -60,7 +60,6 @@
                     <thead style="background-color: #F3F4F6;">
                         <tr style="background-color: #E0F2FE; color: #0EA5E9;">
                             <th style="padding: 8px; text-align: left;">Activity</th>
-                            <th style="padding: 8px; text-align: left;">Description</th>
                             <th style="padding: 8px; text-align: right;">Qty</th>
                             <th style="padding: 8px; text-align: right;">Rate</th>
                             <th style="padding: 8px; text-align: right;">Tax</th>
@@ -73,6 +72,14 @@
                         @if (!empty($InvoiceItemsData) && count($InvoiceItemsData) > 0)
                             @foreach ($InvoiceItemsData as $val)
                                 @php
+                                    $product_code = isset($val->product_code) ? $val->product_code : null;
+                                    $productCodeSet = '';
+                                    if (!empty($product_code)) {
+                                        $product_code = explode(',', $product_code);
+                                        foreach ($product_code as $code) {
+                                            $productCodeSet .= $code . '<br>';
+                                        }
+                                    }
                                     $qty = isset($val->qty) ? $val->qty : 0;
                                     $rate = isset($val->rate) ? $val->rate : 0;
                                     $Amount = $qty * $rate;
@@ -82,9 +89,8 @@
                                 <tr>
                                     <td>
                                         <?= isset($val->item) ? $val->item : '' ?> <br>
-                                        {{ isset($val->product_code) ? $val->product_code : '' }}
+                                        {!! $productCodeSet !!}
                                     </td>
-                                    <td><?= isset($val->desc) ? $val->desc : '' ?></td>
                                     <td><?= $qty ?></td>
                                     <td><?= '$' . $rate ?></td>
                                     <td>HST ON</td>

@@ -4,17 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Transaction extends Model
+class ActivityLog extends Model
 {
-    protected $table = 'transaction';
+    protected $table = 'activity_log';
 
     protected $fillable = [
-        'customer_id',
-        'invoice_id',
+        'module_id',
+        'title',
         'date',
+        'response',
+        'updater',
         'type',
         'desc',
-        'amount',
         'status',
     ];
 

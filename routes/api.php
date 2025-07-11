@@ -151,6 +151,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('invoice_send_mail', [AdminAPIController::class, 'invoiceMailSend']);
 		Route::post('settle_payment', [AdminAPIController::class, 'SettlePayment']);
 		Route::get('transaction_summary/{id}', [AdminAPIController::class, 'TransactionSummary']);
+		Route::post('payment_settlement', [AdminAPIController::class, 'InvoicePaymentSettlement']);
+		Route::post('getpayment_settlement', [AdminAPIController::class, 'GetInvoicePaymentSettlement']);
+		Route::get('get_activity_log', [AdminAPIController::class, 'GetActivityLog']);
 
 		// Users
 		Route::get('get_users', [AdminAPIController::class, 'GetUsers']);
@@ -171,5 +174,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('add_product_store', [AdminAPIController::class, 'AddProductStore']);
 
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
+		Route::get('get_product_report', [AdminAPIController::class, 'GetProductReportDashboard']);
+		Route::get('get_material_report', [AdminAPIController::class, 'GetMaterialReportDashboard']);
 	});
 });

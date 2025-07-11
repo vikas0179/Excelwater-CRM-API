@@ -223,3 +223,31 @@ ALTER TABLE `invoice_item` ADD `product_stock_id` int NULL AFTER `product_id`;
 ALTER TABLE `order` ADD `delivery_date` date NULL AFTER `invoice_file`;
 
 ALTER TABLE `product_master` ADD `min_alert_qty` int(11) NULL AFTER `price`;
+
+-- 10-07-2025
+ALTER TABLE `invoice_item` CHANGE `product_stock_id` `product_stock_id` varchar(256) NULL AFTER `product_id`;
+
+ALTER TABLE `invoice` ADD `save_send` tinyint(3) NOT NULL DEFAULT '0' COMMENT '0=>Send, 1=>Save Send, 2=>Save Print';
+
+-- After 1 PM
+
+CREATE TABLE `activity_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `module_id` int NULL,
+  `title` varchar(256) NULL,
+  `date` date NULL,
+  `response` text NULL,
+  `updater` varchar(256) NULL,
+);
+
+-- 11-07-2025
+
+ALTER TABLE `activity_log`
+ADD `type` varchar(256) COLLATE 'utf8mb4_0900_ai_ci' NULL,
+ADD `desc` text COLLATE 'utf8mb4_0900_ai_ci' NULL AFTER `type`;
+
+ALTER TABLE `activity_log` ADD `status` varchar(50) COLLATE 'utf8mb4_0900_ai_ci' NULL;
+
+ALTER TABLE `transaction` ADD `invoice_id` int NULL AFTER `customer_id`;

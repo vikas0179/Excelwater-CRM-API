@@ -15,6 +15,7 @@ class Supplier extends Model
         'address',
         'tan_number',
         'logo',
+        'spare_part_ids',
 	];
 	
 	protected $casts = [

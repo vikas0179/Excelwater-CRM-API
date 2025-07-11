@@ -45,10 +45,12 @@ use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Carbon\Carbon;
 use DateTime;
+use Illuminate\Support\Arr;
 use League\CommonMark\Node\Query\OrExpr;
 use PHPMailer\PHPMailer\PHPMailer;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
-
+use App\Helper;
+use App\Models\ActivityLog;
 
 class AdminAPIController extends Controller
 {
@@ -115,6 +117,8 @@ class AdminAPIController extends Controller
 		//date_default_timezone_set(getenv("APP_TIMEZONE", "UTC"));
 
 		$this->user = auth("api")->user();
+
+		$this->helper = new Helper();
 
 		$this->middleware('jwt.verify', ['except' => ['login', 'forgot_password', 'verify_token', 'reset_password', 'get_data', 'get_static_data', 'lead_save']]);
 	}
@@ -2975,7 +2979,7 @@ class AdminAPIController extends Controller
 			$file->move($path, $fileName);
 		}
 
-		$last_id = DB::table('supplier')->insert([
+		$last_id = Supplier::create([
 			'name' => $request->name,
 			'email' => $request->email,
 			'phone' => $request->phone,
@@ -2985,7 +2989,8 @@ class AdminAPIController extends Controller
 			'logo' => $fileName,
 		]);
 
-		if ($last_id == true) {
+		if (!empty($last_id)) {
+			$this->helper->ActivityLog($last_id->id, "Add Supplier", date('Y-m-d'), json_encode($last_id), $this->user->name, "Supplier", "", "Create");
 			return $this->response("Supplier Add Successfully.", false);
 		} else {
 			return $this->response("Supplier Add Error.", true);
@@ -3015,6 +3020,7 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
+		$fileName = "";
 		if ($request->hasFile('logo')) {
 			$file = $request->file('logo');
 			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
@@ -3025,14 +3031,17 @@ class AdminAPIController extends Controller
 			]);
 		}
 
-		DB::table('supplier')->where("id", $request->id)->update([
-			'name' => $request->name,
-			'email' => $request->email,
-			'phone' => $request->phone,
-			'address' => $request->address,
-			'tan_number' => (!empty($request->tan_number)) ? $request->tan_number : NULL,
-			'spare_part_ids' => (!empty($request->spare_part_ids)) ? implode(',', $request->spare_part_ids) : [],
-		]);
+		$supplierData = Supplier::where('id', $request->id)->first();
+		$in['name'] = $request->name;
+		$in['email'] = $request->email;
+		$in['phone'] = $request->phone;
+		$in['address'] = $request->address;
+		$in['tan_number'] = (!empty($request->tan_number)) ? $request->tan_number : NULL;
+		$in['spare_part_ids'] = (!empty($request->spare_part_ids)) ? implode(',', $request->spare_part_ids) : [];
+		$supplierData->update($in);
+		$getdata = $supplierData->getChanges();
+
+		$this->helper->ActivityLog($request->id, "Edit Supplier", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Supplier", json_encode($getdata), "Update");
 
 		return $this->response("Supplier Update Successfully.", false);
 	}
@@ -3050,6 +3059,8 @@ class AdminAPIController extends Controller
 		}
 
 		DB::table('supplier')->where('id', $request->id)->delete();
+
+		$this->helper->ActivityLog($request->id, "Delete Supplier", date('Y-m-d'), "", $this->user->name, "Supplier", "", "Delete");
 		return $this->response("Supplier Delete Successfully");
 	}
 
@@ -3170,17 +3181,18 @@ class AdminAPIController extends Controller
 		}
 		$json_item = json_encode($spare_parts_Arry);
 
-		$last_id = DB::table('product_master')->insert([
-			'product_name' => $request->product_name,
-			'product_code' => $request->product_code,
-			'price' => $request->price,
-			'desc' => $request->desc,
-			'image' => $fileName,
-			'spare_parts' => $json_item,
-			'min_alert_qty' => $request->min_alert_qty,
-		]);
+		$pMaster = new ProductMaster();
+		$pMaster->product_name = $request->product_name;
+		$pMaster->product_code = $request->product_code;
+		$pMaster->price = $request->price;
+		$pMaster->desc = $request->desc;
+		$pMaster->image = $request->image;
+		$pMaster->spare_parts = $json_item;
+		$pMaster->min_alert_qty = $request->min_alert_qty;
+		$pMaster->save();
 
-		if ($last_id == true) {
+		if (!empty($pMaster)) {
+			$this->helper->ActivityLog($pMaster->id, "Add Product Master", date('Y-m-d'), json_encode($pMaster), $this->user->name, "Product Master", "", "Create");
 			return $this->response("Product Add Successfully.", false);
 		} else {
 			return $this->response("Product  Error.", true);
@@ -3238,15 +3250,18 @@ class AdminAPIController extends Controller
 		}
 		$json_item = json_encode($spare_parts_Arry);
 
-		DB::table('product_master')->where("id", $request->id)->update([
-			'product_name' => $request->product_name,
-			'product_code' => $request->product_code,
-			'price' => $request->price,
-			'desc' => $request->desc,
-			'spare_parts' => $json_item,
-			'min_alert_qty' => $request->min_alert_qty,
-		]);
-		return $this->response("Product Update Successfully.", false);
+		$PMasterData = ProductMaster::where('id', $request->id)->first();
+		$in['product_name'] = $request->product_name;
+		$in['product_code'] = $request->product_code;
+		$in['price'] = $request->price;
+		$in['desc'] = $request->desc;
+		$in['spare_parts'] = $json_item;
+		$in['min_alert_qty'] = $request->min_alert_qty;
+		$PMasterData->update($in);
+		$getdata = $PMasterData->getChanges();
+
+		$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Product Master", json_encode($getdata), "Update");
+		return $this->response("Product Master Update Successfully.", false);
 	}
 
 	public function delete_product_master(Request $request)
@@ -3263,6 +3278,7 @@ class AdminAPIController extends Controller
 
 		if (ProductMaster::find($request->id)) {
 			DB::table('product_master')->where('id', $request->id)->delete();
+			$this->helper->ActivityLog($request->id, "Delete Product Master", date('Y-m-d'), "", $this->user->name, "Product Master", "", "Delete");
 			return $this->response("Product Delete Successfully", false);
 		} else {
 			return $this->response("Product Data Not Found.", true);
@@ -3295,8 +3311,9 @@ class AdminAPIController extends Controller
 		}
 	}
 
-	// Spare Part
 
+
+	// Spare Part
 	public function spare_parts()
 	{
 		$SparePartsData = SpareParts::orderBy("part_name", "asc")->paginate(100);
@@ -3362,18 +3379,19 @@ class AdminAPIController extends Controller
 			$file->move($path, $fileName);
 		}
 
-		$inserted = DB::table('spare_parts')->insert([
-			'part_name' => $request->part_name,
-			'part_number' => $request->part_number,
-			'price' => $request->price,
-			'min_alert_qty' => $request->min_alert_qty,
-			'desc' => $request->desc,
-			'image' => $fileName,
-			'stock_qty' => $request->stock_qty,
-			'opening_stock' => $request->opening_stock,
-		]);
+		$sparePartData = new SpareParts();
+		$sparePartData->part_name = $request->part_name;
+		$sparePartData->part_number = $request->part_number;
+		$sparePartData->price = $request->price;
+		$sparePartData->min_alert_qty = $request->min_alert_qty;
+		$sparePartData->desc = $request->desc;
+		$sparePartData->image = $fileName;
+		$sparePartData->stock_qty = $request->stock_qty;
+		$sparePartData->opening_stock = $request->opening_stock;
+		$sparePartData->save();
 
-		if ($inserted) {
+		if ($sparePartData) {
+			$this->helper->ActivityLog($sparePartData->id, "Add Spare Part", date('Y-m-d'), json_encode($sparePartData), $this->user->name, "Spare Part", "", "Create");
 			return $this->response("Raw Material  Add Successfully.", false);
 		} else {
 			return $this->response("Raw Material Error.", true);
@@ -3413,16 +3431,18 @@ class AdminAPIController extends Controller
 			]);
 		}
 
-		DB::table('spare_parts')->where("id", $request->id)->update([
-			'part_name' => $request->part_name,
-			'part_number' => $request->part_number,
-			'price' => $request->price,
-			'min_alert_qty' => $request->min_alert_qty,
-			'desc' => $request->desc,
-			'stock_qty' => $request->stock_qty,
-			'opening_stock' => $request->opening_stock,
-		]);
+		$SPartData = SpareParts::where('id', $request->id)->first();
+		$in['part_name'] = $request->part_name;
+		$in['part_number'] = $request->part_number;
+		$in['price'] = $request->price;
+		$in['min_alert_qty'] = $request->min_alert_qty;
+		$in['desc'] = $request->desc;
+		$in['stock_qty'] = $request->stock_qty;
+		$in['opening_stock'] = $request->opening_stock;
+		$SPartData->update($in);
+		$getdata = $SPartData->getChanges();
 
+		$this->helper->ActivityLog($request->id, "Edit Spare Part", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Spare Part", json_encode($getdata), "Update");
 		return $this->response("Raw Material Update Successfully.", false);
 	}
 
@@ -3440,6 +3460,7 @@ class AdminAPIController extends Controller
 
 		if (SpareParts::find($request->id)) {
 			DB::table('spare_parts')->where('id', $request->id)->delete();
+			$this->helper->ActivityLog($request->id, "Delete Spare Part", date('Y-m-d'), "", $this->user->name, "Spare Part", "", "Delete");
 			return $this->response("Raw Material Delete Successfully", false);
 		} else {
 			return $this->response("Raw Material Data Not Found.", true);
@@ -3551,21 +3572,25 @@ class AdminAPIController extends Controller
 			$GenerateORderNumber = "P" . date("dmY") . $IncreseOrderNumber;
 		}
 
-		$id = DB::table('order')->insertGetId([
-			'supplier_id' => $request->supplier_id,
-			'desc' => $request->description,
-			'order_id' => time() . rand(1, 1000),
-			'order_number' => $GenerateORderNumber,
-		]);
+		$OrderData = new Order();
+		$OrderData->supplier_id = $request->supplier_id;
+		$OrderData->desc = $request->description;
+		$OrderData->order_id = time() . rand(1, 1000);
+		$OrderData->order_number = $GenerateORderNumber;
+		$OrderData->save();
+		$id = $OrderData->id;
+
+		$this->helper->ActivityLog($id, "Add Order", date('Y-m-d'), json_encode($OrderData), $this->user->name, "Order", "", "Create");
 
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
-				DB::table('order_item')->insert([
-					'order_id' => $id,
-					'item' => $item,
-					'desc' => $request->desc[$key],
-					'qty' => $request->qty[$key],
-				]);
+				$OrderItemData = new OrderItem();
+				$OrderItemData->order_id = $id;
+				$OrderItemData->item = $item;
+				$OrderItemData->desc = $request->desc[$key];
+				$OrderItemData->qty = $request->qty[$key];
+				$OrderItemData->save();
+				$this->helper->ActivityLog($OrderItemData->id, "Add Order Item", date('Y-m-d'), json_encode($OrderItemData), $this->user->name, "Order Item", "", "Create");
 			}
 		}
 
@@ -3648,6 +3673,7 @@ class AdminAPIController extends Controller
 		if (Order::find($request->id)) {
 			DB::table('order')->where('id', $request->id)->delete();
 			DB::table('order_item')->where('order_id', $request->id)->delete();
+			$this->helper->ActivityLog($request->id, "Delete Order", date('Y-m-d'), "", $this->user->name, "Order", "", "Delete");
 			return $this->response("Raw Material Order Delete Successfully", false);
 		} else {
 			return $this->response("Raw Material Order Not Found.", true);
@@ -3663,7 +3689,6 @@ class AdminAPIController extends Controller
 			'item' => 'required',
 			'desc' => 'required',
 			'qty' => 'required',
-			// 'rate' => 'required',
 			'description' => 'required',
 		], [
 			'id.required' => 'ID is Required',
@@ -3672,7 +3697,6 @@ class AdminAPIController extends Controller
 			'item.required' => 'Please Enter Item',
 			'desc.required' => 'Please Enter Desc',
 			'qty.required' => 'Please Enter Quantity',
-			// 'rate.required' => 'Please Enter Rate',
 			'description' => 'Please Enter Description',
 		]);
 
@@ -3680,43 +3704,26 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		DB::table('order')->where("id", $request->id)->update([
-			'supplier_id' => $request->supplier_id,
-			'desc' => $request->description,
-		]);
+		$OrderData = Order::where('id', $request->id)->first();
+		$OrderData->supplier_id = $request->supplier_id;
+		$OrderData->desc = $request->description;
+		$OrderData->save();
+		$this->helper->ActivityLog($request->id, "Edit Order", date('Y-m-d'), json_encode($OrderData), $this->user->name, "Order", "", "Update");
 
 		DB::table('order_item')->where('order_id', $request->id)->delete();
-		// DB::table('stocks')->where('order_id', $request->id)->delete();
+		$this->helper->ActivityLog($request->id, "Edit Order Item", date('Y-m-d'), "", $this->user->name, "Order", "", "Delete");
 
-		// $total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
-				DB::table('order_item')->insert([
-					'order_id' => $request->id,
-					'item' => $item,
-					'desc' => $request->desc[$key],
-					'qty' => $request->qty[$key],
-					// 'rate' => $request->rate[$key],
-					// 'amount' => ($request->qty[$key] * $request->rate[$key]),
-				]);
-
-				// DB::table('stocks')->insert([
-				// 	'order_id' => $request->id,
-				// 	'supplier_id' => $request->supplier_id,
-				// 	'spare_id' => $request->spare_id[$key],
-				// 	'qty' => $request->qty[$key],
-				// 	'price' => $request->rate[$key],
-				// 	'total_amount' => ($request->qty[$key] * $request->rate[$key]),
-				// ]);
-
-				// $total_amount += ($request->qty[$key] * $request->rate[$key]);
+				$OrderItemData = new OrderItem();
+				$OrderItemData->order_id = $request->id;
+				$OrderItemData->item = $item;
+				$OrderItemData->desc = $request->desc[$key];
+				$OrderItemData->qty = $request->qty[$key];
+				$OrderItemData->save();
+				$this->helper->ActivityLog($OrderItemData->id, "Add Invoice Item", date('Y-m-d'), json_encode($OrderItemData), $this->user->name, "Invoice Item", "", "Create");
 			}
 		}
-
-		// DB::table('order')->where("id", $request->id)->update([
-		// 	'sub_total' => $total_amount,
-		// 	'total_amount' => $total_amount,
-		// ]);
 
 		return $this->response("Raw Material Order Update Successfully.", false);
 	}
@@ -3750,11 +3757,12 @@ class AdminAPIController extends Controller
 			$file->move($path, $fileName);
 		}
 
-		DB::table('order')->where("id", $request->id)->update([
-			'invoice_desc' => $request->invoice_desc,
-			'invoice_file' => $fileName,
-			'delivery_date' => date("Y-m-d"),
-		]);
+		$OrderData = Order::where('id', $request->id)->first();
+		$OrderData->invoice_desc = $request->invoice_desc;
+		$OrderData->invoice_file = $fileName;
+		$OrderData->delivery_date = date("Y-m-d");
+		$OrderData->save();
+		$this->helper->ActivityLog($request->id, "Edit Order", date('Y-m-d'), json_encode($OrderData), $this->user->name, "Order", "", "Update");
 
 		$order_item_ids = (array) $request->order_item_id;
 		$delivery_qtys = (array) $request->delivery_qty;
@@ -3766,6 +3774,7 @@ class AdminAPIController extends Controller
 				$qty = $delivery_qtys[$key] ?? null;
 				$rate = $rates[$key] ?? null;
 				if ($qty !== null) {
+
 					$OrderItemData = \App\Models\OrderItem::find($item_id);
 					$OrderItemData->delivery_qty = $qty;
 					$OrderItemData->rate = $rate;
@@ -3773,14 +3782,16 @@ class AdminAPIController extends Controller
 					$OrderItemData->amount = ($rate * $qty);
 					$total_amount += ($rate * $qty);
 					$OrderItemData->save();
+					$this->helper->ActivityLog($OrderItemData->id, "Add Order", date('Y-m-d'), json_encode($OrderItemData), $this->user->name, "Order", "", "Create");
 				}
 			}
 		}
 
-		DB::table('order')->where("id", $request->id)->update([
-			'sub_total' => $total_amount,
-			'total_amount' => $total_amount
-		]);
+		$OrderDataSec = Order::where('id', $request->id)->first();
+		$OrderDataSec->sub_total = $total_amount;
+		$OrderDataSec->total_amount = $total_amount;
+		$OrderDataSec->save();
+		$this->helper->ActivityLog($request->id, "Edit Order", date('Y-m-d'), json_encode($OrderDataSec), $this->user->name, "Order", "", "Update");
 
 		return $this->response("Raw Material Order details updated successfully.", false);
 	}
@@ -3794,7 +3805,17 @@ class AdminAPIController extends Controller
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
-				$invoice->invoice_detail = InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_item.invoice_id', $invoice->id)->select('invoice_item.*', 'product_stock.product_code', 'product_stock.id as product_code_id')->get();
+				$invoice->invoice_detail = \App\Models\InvoiceItem::leftJoin('product_stock', function ($join) {
+					$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
+				})
+					->where('invoice_item.invoice_id', $invoice->id)
+					->select(
+						'invoice_item.*',
+						DB::raw('GROUP_CONCAT(product_stock.product_code) as product_code'),
+						DB::raw('GROUP_CONCAT(product_stock.id) as product_code_id'),
+					)
+					->groupBy(DB::raw("product_stock.product_id"))
+					->get();
 			}
 		}
 		if (!empty($invoices)) {
@@ -3809,7 +3830,18 @@ class AdminAPIController extends Controller
 			foreach ($invoices as $invoice) {
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
-				$invoice->invoice_detail = InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_item.invoice_id', $invoice->id)->select('invoice_item.*', 'product_stock.product_code', 'product_stock.id as product_code_id')->get();
+				$invoice_detail = InvoiceItem::leftJoin('product_stock', function ($join) {
+					$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
+				})
+					->where('invoice_item.invoice_id', $invoice->id)
+					->select(
+						'invoice_item.*',
+						DB::raw('GROUP_CONCAT(product_stock.product_code) as product_code'),
+						DB::raw('GROUP_CONCAT(product_stock.id) as product_code_id'),
+					)
+					->groupBy(DB::raw("product_stock.product_id"))
+					->get();
+				$invoice->invoice_detail = $invoice_detail;
 			}
 		}
 		if (!empty($invoices)) {
@@ -3825,7 +3857,6 @@ class AdminAPIController extends Controller
 			'invoice_date' => 'required',
 			'product_id' => 'required',
 			'item' => 'required|array',
-			'desc' => 'required|array',
 			'qty' => 'required|array',
 			'rate' => 'required|array',
 			'description' => 'required',
@@ -3834,7 +3865,6 @@ class AdminAPIController extends Controller
 			'invoice_date.required' => 'Please Select Invoice Date',
 			'product_id.required' => 'Please Select Product Name',
 			'item.required' => 'Please Enter Item',
-			'desc.required' => 'Please Enter Description',
 			'qty.required' => 'Please Enter Quantity',
 			'rate.required' => 'Please Enter Rate',
 			'description.required' => 'Please Enter Description',
@@ -3849,49 +3879,71 @@ class AdminAPIController extends Controller
 
 		$is_send_mail = isset($request->is_send_mail) ? $request->is_send_mail : 0;
 
-		$id = DB::table('invoice')->insertGetId([
-			'invoice_no' => $request->invoice_no,
-			'desc' => $request->description,
-			'customer_id' => (!empty($request->customer_id)) ? $request->customer_id : 0,
-			'ship_to' => (!empty($request->ship_to)) ? $request->ship_to : NULL,
-			'bill_to' => (!empty($request->bill_to)) ? $request->bill_to : NULL,
-			'invoice_date' => date('Y-m-d', strtotime($request->invoice_date)),
-		]);
+		$InvoiceIstData = new Invoice();
+		$InvoiceIstData->invoice_no = $request->invoice_no;
+		$InvoiceIstData->desc = $request->description;
+		$InvoiceIstData->customer_id = (!empty($request->customer_id)) ? $request->customer_id : 0;
+		$InvoiceIstData->ship_to = (!empty($request->ship_to)) ? $request->ship_to : NULL;
+		$InvoiceIstData->bill_to = (!empty($request->bill_to)) ? $request->bill_to : NULL;
+		$InvoiceIstData->invoice_date = date('Y-m-d', strtotime($request->invoice_date));
+		$InvoiceIstData->save_send = $is_send_mail;
+		$InvoiceIstData->save();
+		$id = $InvoiceIstData->id;
+
+		$this->helper->ActivityLog($id, "Add Invoice", date('Y-m-d'), json_encode($InvoiceIstData), $this->user->name, "Invoice", "", "Create");
 
 		$total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
 				$product_stock_id = (isset($request->product_stock_id[$key]) && !empty($request->product_stock_id[$key])) ? $request->product_stock_id[$key] : NULL;
 				if (!empty($product_stock_id)) {
-					ProductStock::where('id', $product_stock_id)->update(['status' => 1]);
+					$exp_product_stock_id = explode(',', $product_stock_id);
+					foreach ($exp_product_stock_id as $p_stock_id) {
+						ProductStock::where('id', $p_stock_id)->update(['status' => 1]);
+					}
 				}
-				DB::table('invoice_item')->insert([
-					'invoice_id' => $id,
-					'product_id' => $request->product_id[$key],
-					'product_stock_id' => $product_stock_id,
-					'item' => $item,
-					'desc' => $request->desc[$key],
-					'qty' => $request->qty[$key],
-					'rate' => $request->rate[$key],
-					'amount' => ($request->qty[$key] * $request->rate[$key]),
-				]);
+
+				$InvoiceItemData = new InvoiceItem();
+				$InvoiceItemData->invoice_id = $id;
+				$InvoiceItemData->product_id = $request->product_id[$key];
+				$InvoiceItemData->product_stock_id = $product_stock_id;
+				$InvoiceItemData->item = $item;
+				$InvoiceItemData->qty = $request->qty[$key];
+				$InvoiceItemData->rate = $request->rate[$key];
+				$InvoiceItemData->amount = ($request->qty[$key] * $request->rate[$key]);
+				$InvoiceItemData->save();
 				$total_amount += ($request->qty[$key] * $request->rate[$key]);
+				$this->helper->ActivityLog($id, "Add Invoice Item", date('Y-m-d'), json_encode($InvoiceItemData), $this->user->name, "Invoice Item", "", "Create");
 			}
 		}
 
-		DB::table('invoice')->where("id", $id)->update([
-			'sub_total' => $total_amount,
-			'total_amount' => $total_amount,
-		]);
+		$EditInvoiceData = Invoice::where('id', $id)->first();
+		$in['sub_total'] = $total_amount;
+		$in['total_amount'] = $total_amount;
+		$EditInvoiceData->update($in);
+		$getdata = $EditInvoiceData->getChanges();
+
+		$this->helper->ActivityLog($id, "Add Invoice", date('Y-m-d'), json_encode($EditInvoiceData), $this->user->name, "Invoice", $EditInvoiceData, "Create");
 
 		if (!empty($id)) {
 			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email', 'users.bcc', 'users.cc')->first();
 			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
 				$bccMails = isset($InvoiceData->bcc) && !empty($InvoiceData->bcc) ? explode(',', $InvoiceData->bcc) : NULL;
 				$ccMails = isset($InvoiceData->cc) && !empty($InvoiceData->cc) ? explode(',', $InvoiceData->cc) : NULL;
-				$InvoiceItemsData = InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_item.invoice_id', $InvoiceData->id)->select('invoice_item.*', 'product_stock.product_code')->get();
+
+				$InvoiceItemsData = InvoiceItem::leftJoin('product_stock', function ($join) {
+					$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
+				})
+					->where('invoice_item.invoice_id', $InvoiceData->id)
+					->select(
+						'invoice_item.*',
+						DB::raw('GROUP_CONCAT(product_stock.product_code) as product_code'),
+						DB::raw('GROUP_CONCAT(product_stock.id) as product_code_id'),
+					)
+					->groupBy(DB::raw("product_stock.product_id"))
+					->get();
+
 				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
-				// $QrCode = QrCode::size(80)->generate($InvoiceUrl);
 				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
 
 				$mail = new PHPMailer(true);
@@ -3928,7 +3980,9 @@ class AdminAPIController extends Controller
 					return $this->response("Message could not be sent.", true);
 				}
 			}
-			return $this->response("Invoice Added Successfully.", false);
+
+			$invoiceInsertAry = array('id' => $id, 'send_status' => $is_send_mail);
+			return $this->response("Invoice Added Successfully", false, $invoiceInsertAry);
 		} else {
 			return $this->response("Invoice Error.", true);
 		}
@@ -3940,9 +3994,22 @@ class AdminAPIController extends Controller
 			$invoiceData = Invoice::where('id', $id)->first();
 			$userData = User::where('id', $invoiceData->customer_id)->first();
 			$invoiceData->customer_name = isset($userData->name) ? $userData->name : '';
+
+			$invoice_detail = InvoiceItem::leftJoin('product_stock', function ($join) {
+				$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
+			})
+				->where('invoice_item.invoice_id', $id)
+				->select(
+					'invoice_item.*',
+					DB::raw('GROUP_CONCAT(product_stock.product_code) as product_code'),
+					DB::raw('GROUP_CONCAT(product_stock.id) as product_code_id'),
+				)
+				->groupBy(DB::raw("product_stock.product_id"))
+				->get();
+
 			$invoiceAry = array(
 				'invoice' => $invoiceData,
-				'invoice_detail' => InvoiceItem::leftJoin('product_stock', 'product_stock.id', '=', 'invoice_item.product_stock_id')->where('invoice_id', $id)->select('invoice_item.*', 'product_stock.product_code')->get(),
+				'invoice_detail' => $invoice_detail,
 			);
 			return $this->response("", false, $invoiceAry);
 		} else {
@@ -3965,6 +4032,7 @@ class AdminAPIController extends Controller
 		if (Invoice::find($request->id)) {
 			DB::table('invoice')->where('id', $request->id)->delete();
 			DB::table('invoice_item')->where('invoice_id', $request->id)->delete();
+			$this->helper->ActivityLog($request->id, "Delete Invoice", date('Y-m-d'), "", $this->user->name, "Invoice", "", "Delete");
 			return $this->response("Invoice Delete Successfully", false);
 		} else {
 			return $this->response("Invoice Not Found.", true);
@@ -3978,7 +4046,6 @@ class AdminAPIController extends Controller
 			'invoice_date' => 'required',
 			'product_id' => 'required',
 			'item' => 'required',
-			'desc' => 'required',
 			'qty' => 'required',
 			'rate' => 'required',
 			'description' => 'required',
@@ -3987,7 +4054,6 @@ class AdminAPIController extends Controller
 			'invoice_date.required' => 'Please Select Invoice Date',
 			'product_id.required' => 'Please Select Product Name',
 			'item.required' => 'Please Enter Item',
-			'desc.required' => 'Please Enter Description',
 			'qty.required' => 'Please Enter Quantity',
 			'rate.required' => 'Please Enter Rate',
 			'description.required' => 'Please Enter Description',
@@ -3999,49 +4065,68 @@ class AdminAPIController extends Controller
 
 		$is_send_mail = isset($request->is_send_mail) ? $request->is_send_mail : 0;
 
-		DB::table('invoice')->where("id", $request->id)->update([
-			'customer_id' => (!empty($request->customer_id)) ? $request->customer_id : 0,
-			'ship_to' => (!empty($request->ship_to)) ? $request->ship_to : NULL,
-			'bill_to' => (!empty($request->bill_to)) ? $request->bill_to : NULL,
-			'invoice_date' => date('Y-m-d', strtotime($request->invoice_date)),
-			'desc' => $request->description,
-		]);
+		$EditInvoiceData = Invoice::where('id', $request->id)->first();
+		$EditInvoiceData->customer_id = (!empty($request->customer_id)) ? $request->customer_id : 0;
+		$EditInvoiceData->ship_to = (!empty($request->ship_to)) ? $request->ship_to : NULL;
+		$EditInvoiceData->bill_to = (!empty($request->bill_to)) ? $request->bill_to : NULL;
+		$EditInvoiceData->invoice_date = date('Y-m-d', strtotime($request->invoice_date));
+		$EditInvoiceData->desc = $request->description;
+		$EditInvoiceData->save();
+		$getdata = $EditInvoiceData->getChanges();
+
+		$this->helper->ActivityLog($request->id, "Edit Invoice", date('Y-m-d'), json_encode($EditInvoiceData), $this->user->name, "Invoice", $EditInvoiceData, "Update");
 
 		DB::table('invoice_item')->where('invoice_id', $request->id)->delete();
-		DB::table('use_parts')->where('invoice_id', $request->id)->delete();
+		$this->helper->ActivityLog($request->id, "Delete Invoice Item", date('Y-m-d'), "", $this->user->name, "Invoice", $EditInvoiceData, "Delete");
 
 		$total_amount = 0;
 		if (!empty($request->item)) {
 			foreach ($request->item as $key => $item) {
 				$product_stock_id = (isset($request->product_stock_id[$key]) && !empty($request->product_stock_id[$key])) ? $request->product_stock_id[$key] : NULL;
 				if (!empty($product_stock_id)) {
-					ProductStock::where('id', $product_stock_id)->update(['status' => 1]);
+					$exp_product_stock_id = explode(',', $product_stock_id);
+					foreach ($exp_product_stock_id as $p_stock_id) {
+						ProductStock::where('id', $p_stock_id)->update(['status' => 1]);
+					}
 				}
-				DB::table('invoice_item')->insert([
-					'invoice_id' => $request->id,
-					'product_id' => $request->product_id[$key],
-					'product_stock_id' => $product_stock_id,
-					'item' => $item,
-					'desc' => $request->desc[$key],
-					'qty' => $request->qty[$key],
-					'rate' => $request->rate[$key],
-					'amount' => ($request->qty[$key] * $request->rate[$key]),
-				]);
+
+				$InvoiceItemData = new InvoiceItem();
+				$InvoiceItemData->invoice_id = $request->id;
+				$InvoiceItemData->product_id = $request->product_id[$key];
+				$InvoiceItemData->product_stock_id = $product_stock_id;
+				$InvoiceItemData->item = $item;
+				$InvoiceItemData->qty = $request->qty[$key];
+				$InvoiceItemData->rate = $request->rate[$key];
+				$InvoiceItemData->amount = ($request->qty[$key] * $request->rate[$key]);
+				$InvoiceItemData->save();
 				$total_amount += ($request->qty[$key] * $request->rate[$key]);
+				$this->helper->ActivityLog($request->id, "Add Invoice Item", date('Y-m-d'), json_encode($InvoiceItemData), $this->user->name, "Invoice Item", "", "Create");
 			}
 		}
 
-		DB::table('invoice')->where("id", $request->id)->update([
-			'sub_total' => $total_amount,
-			'total_amount' => $total_amount,
-		]);
+		$EditInvoiceData = Invoice::where('id', $request->id)->first();
+		$in['sub_total'] = $total_amount;
+		$in['total_amount'] = $total_amount;
+		$EditInvoiceData->update($in);
+		$getdata = $EditInvoiceData->getChanges();
+
+		$this->helper->ActivityLog($request->id, "Add Invoice", date('Y-m-d'), json_encode($EditInvoiceData), $this->user->name, "Invoice", $EditInvoiceData, "Create");
 
 		$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $request->id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email')->first();
 		if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
 			$bccMails = isset($InvoiceData->bcc) && !empty($InvoiceData->bcc) ? explode(',', $InvoiceData->bcc) : NULL;
 			$ccMails = isset($InvoiceData->cc) && !empty($InvoiceData->cc) ? explode(',', $InvoiceData->cc) : NULL;
-
-			$InvoiceItemsData = InvoiceItem::where('invoice_id', $InvoiceData->id)->get();
+			$InvoiceItemsData = InvoiceItem::leftJoin('product_stock', function ($join) {
+				$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
+			})
+				->where('invoice_item.invoice_id', $InvoiceData->id)
+				->select(
+					'invoice_item.*',
+					DB::raw('GROUP_CONCAT(product_stock.product_code) as product_code'),
+					DB::raw('GROUP_CONCAT(product_stock.id) as product_code_id'),
+				)
+				->groupBy(DB::raw("product_stock.product_id"))
+				->get();
 			$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
 			$QrCode = QrCode::size(80)->generate($InvoiceUrl);
 			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
@@ -4081,7 +4166,8 @@ class AdminAPIController extends Controller
 			}
 		}
 
-		return $this->response("Invoice Update Successfully.", false);
+		$invoiceInsertAry = array('id' => $request->id, 'send_status' => $is_send_mail);
+		return $this->response("Invoice Update Successfully", false, $invoiceInsertAry);
 	}
 
 	public function check_use_parts()
@@ -4115,11 +4201,14 @@ class AdminAPIController extends Controller
 		}
 
 		$in = $request->all();
+		$status = isset($in['status']) ? $in['status'] : 0;
 
 		$invoiceData = Invoice::where('id', $in['id'])->first();
-		$invoiceData->void_status = isset($in['status']) ? $in['status'] : 0;
+		$invoiceData->void_status = $status;
 		$invoiceData->save();
+
 		if (!empty($invoiceData)) {
+			$this->helper->ActivityLog($in['id'], "Change Status Invoice", date('Y-m-d'), json_encode(array('void_status' => $status)), $this->user->name, "Invoice", json_encode(array('void_status' => $status)), "Change Status");
 			return $this->response("Void Status Changed!", false, $invoiceData);
 		} else {
 			return $this->response("Invoice Not Found.", true);
@@ -4153,7 +4242,7 @@ class AdminAPIController extends Controller
 
 		if (!empty($invoiceData) && !empty($transaction_amount)) {
 
-			Transaction::insert([
+			$response = Transaction::create([
 				'customer_id' => $in['customer_id'],
 				'date' => $in['date'],
 				'type' => $in['type'],
@@ -4163,6 +4252,9 @@ class AdminAPIController extends Controller
 				'created_at' => date('Y-m-d H:i:s'),
 				'updated_at' => date('Y-m-d H:i:s'),
 			]);
+
+			$this->helper->ActivityLog("Add Transaction", $response->id, $response, $this->user->name);
+
 
 			foreach ($invoiceData as $invoice) {
 				$remaining = !empty($invoice->remaining_amount) ? $invoice->remaining_amount : $invoice->total_amount;
@@ -4177,6 +4269,8 @@ class AdminAPIController extends Controller
 					$subAmount = 0;
 				}
 				$invoice->save();
+
+				$this->helper->ActivityLog($request->id, "Invoice Settle Amount", date('Y-m-d'), $invoice, $this->user->name, "Customer", "", "Create");
 
 				if ($subAmount <= 0) {
 					break;
@@ -4222,6 +4316,123 @@ class AdminAPIController extends Controller
 
 		return $this->response("", false, $data);
 	}
+
+	public function InvoicePaymentSettlement(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'customer_id' => 'required',
+			'invoice_id' => 'required',
+			'date' => 'required',
+			'type' => 'required',
+			'amount' => 'required',
+		], [
+			'customer_id.required' => 'Please Select Customer Name',
+			'invoice_id.required' => 'Please Select Invoice Row',
+			'date.required' => 'Please Select Date',
+			'type.required' => 'Please Enter Type',
+			'amount.required' => 'Please Enter Amount',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$in = $request->all();
+		$transaction_amount = isset($in['amount']) && !empty($in['amount']) ? $in['amount'] : 0;
+		$invoiceData = Invoice::where('transaction_type', 0)->where('customer_id', $in['customer_id'])->where('id', $in['invoice_id'])->select('id', 'sub_total', 'total_amount', 'remaining_amount', 'transaction_type')->first();
+		$subAmount = $transaction_amount;
+		if (!empty($invoiceData) && !empty($transaction_amount)) {
+
+			$response = Transaction::create([
+				'customer_id' => $in['customer_id'],
+				'invoice_id' => $in['invoice_id'],
+				'date' => $in['date'],
+				'type' => $in['type'],
+				'desc' => isset($in['desc']) && !empty($in['desc']) ? $in['desc'] : NULL,
+				'amount' => $transaction_amount,
+				'status' => 1,
+				'created_at' => date('Y-m-d H:i:s'),
+				'updated_at' => date('Y-m-d H:i:s'),
+			]);
+			$this->helper->ActivityLog($response->id, "Add Transaction", date('Y-m-d'), json_encode($response), $this->user->name, "Transaction", "", "Create");
+
+			$remaining = !empty($invoiceData->remaining_amount) ? $invoiceData->remaining_amount : $invoiceData->total_amount;
+
+			if ($subAmount >= $remaining) {
+				$invoiceData->remaining_amount = 0;
+				$invoiceData->transaction_type = 1;
+				$subAmount -= $remaining;
+			} else {
+				$invoiceData->remaining_amount = $remaining - $subAmount;
+				$invoiceData->transaction_type = 0;
+				$subAmount = 0;
+			}
+			$invoiceData->save();
+			$this->helper->ActivityLog($request->id, "Invoice Settle Amount", date('Y-m-d'), $invoiceData, $this->user->name, "Transaction", "", "Create");
+			return $this->response("Invoices updated.", false);
+		} else {
+			return $this->response("Not Found.", true);
+		}
+	}
+
+	public function GetInvoicePaymentSettlement(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+		], [
+			'id.required' => 'Please Select Invoice',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$TransactionList = Invoice::Join('transaction', 'transaction.invoice_id', '=', 'invoice.id')
+			->where('invoice.id', $request->id)
+			->select('transaction.date', 'transaction.type', 'transaction.amount', 'transaction.desc')
+			->paginate(10);
+		if (!empty($TransactionList)) {
+			return $this->response("", false, $TransactionList);
+		} else {
+			return $this->response("Transaction Not Found.", true);
+		}
+	}
+
+	public function GetActivityLog()
+	{
+		$activityList = ActivityLog::select('title', 'date', 'response', 'updater', 'type', 'desc', 'status')->orderBy('id', "DESC")->paginate(50);
+		if (!empty($activityList)) {
+			foreach ($activityList as &$activity) {
+				$activity->date = date("d-m-Y", strtotime($activity->date));
+				$activity->response = $this->deepJsonDecode($activity->response ?? null);
+				$activity->desc = $this->deepJsonDecode($activity->desc ?? null);
+			}
+			return $this->response("", false, $activityList);
+		} else {
+			return $this->response("Activity Log Not Found.", true);
+		}
+	}
+
+	public function deepJsonDecode($value)
+	{
+		if (is_string($value) && $this->isJson($value)) {
+			$value = json_decode($value, true);
+		}
+		if (is_array($value)) {
+			foreach ($value as $key => $val) {
+				$value[$key] = $this->deepJsonDecode($val);
+			}
+		}
+		return $value;
+	}
+
+	public function isJson($string)
+	{
+		if (!is_string($string)) return false;
+		json_decode($string);
+		return json_last_error() === JSON_ERROR_NONE;
+	}
+
 
 
 
@@ -4282,6 +4493,7 @@ class AdminAPIController extends Controller
 		$userData = User::create($in);
 
 		if (!empty($userData)) {
+			$this->helper->ActivityLog($userData->id, "Add Customer", date('Y-m-d'), json_encode($userData), $this->user->name, "Customer", "", "Create");
 			return $this->response("Add New Customer Successfully!", false);
 		} else {
 			return $this->response("Error", true);
@@ -4332,8 +4544,10 @@ class AdminAPIController extends Controller
 		$userData = User::where('id', $request->id)->first();
 		unset($in['id']);
 		$userData->update($in);
+		$getdata = $userData->getChanges();
 
 		if (!empty($userData)) {
+			$this->helper->ActivityLog($request->id, "Edit Customer", date('Y-m-d'), json_encode($userData), $this->user->name, "Customer", json_encode($getdata), "Update");
 			return $this->response("Edit Customer Successfully!", false);
 		} else {
 			return $this->response("Error", true);
@@ -4354,6 +4568,7 @@ class AdminAPIController extends Controller
 
 		$userDelete = User::find($request->id)->delete();
 		if ($userDelete) {
+			$this->helper->ActivityLog($request->id, "Delete Customer", date('Y-m-d'), "", $this->user->name, "Customer", "", "Delete");
 			return $this->response("Customer Delete Successfully!", false);
 		} else {
 			return $this->response("Error", true);
@@ -4444,6 +4659,60 @@ class AdminAPIController extends Controller
 		}
 	}
 
+	public function GetProductReportDashboard()
+	{
+		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
+			->select('product_master.product_name', 'product_master.min_alert_qty', 'product_master.id')
+			->groupBy('product_master.id')
+			->paginate(10);
+		if (!empty($ProductMasterList)) {
+			foreach ($ProductMasterList as $ProductMaster) {
+				$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
+				$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
+				unset($ProductMaster->id);
+			}
+		}
+		if (!empty($ProductMasterList)) {
+			return $this->response("", false, $ProductMasterList);
+		} else {
+			return $this->response("Not Found Product Stock Alert.", true);
+		}
+	}
+
+	public function GetMaterialReportDashboard()
+	{
+		$SparePartsData = SpareParts::select('id', 'part_name', 'opening_stock', 'min_alert_qty')->orderBy("part_name", "asc")->paginate(10);
+		if (!$SparePartsData->isEmpty()) {
+			foreach ($SparePartsData as $sparePart) {
+				$orderItemData = OrderItem::where('item', $sparePart->part_name)->select(DB::raw("SUM(delivery_qty) as total_delivery_qty"),)->first();
+				$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
+				$opening_stock = (!empty($sparePart->opening_stock)) ? $sparePart->opening_stock : 0;
+				$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
+				// Total Delivery qty
+				$totalSparePartQty = 0;
+				$productMasters = ProductMaster::all();
+				foreach ($productMasters as $product) {
+					if (!empty($product->spare_parts)) {
+						$sparePartsArr = json_decode($product->spare_parts, true);
+						foreach ($sparePartsArr as $part) {
+							if ($part['spare_parts_id'] == $sparePart->id) {
+								$totalSparePartQty += $part['qty'];
+							}
+						}
+					}
+				}
+				unset($sparePart->id);
+				$sparePart->stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
+			}
+		}
+
+		if (!$SparePartsData->isEmpty()) {
+			return $this->response("", false, $SparePartsData);
+		} else {
+			return $this->response("Not Found Material Stock Alert.", true);
+		}
+	}
+
 
 
 	// Employee
@@ -4463,7 +4732,6 @@ class AdminAPIController extends Controller
 
 	public function AddEmployee(Request $request)
 	{
-
 		$validator = Validator::make($request->all(), [
 			'name' => 'required',
 			'email' => 'required|email|unique:admin',
@@ -4485,6 +4753,9 @@ class AdminAPIController extends Controller
 		$admin->role = 1;
 		$admin->status = 1;
 		$admin->save();
+
+		$this->helper->ActivityLog($admin->id, "Add Employee", date('Y-m-d'), json_encode($admin), $this->user->name, "Employee", "", "Create");
+
 		return $this->response("Added Employee Successfully", false);
 	}
 
@@ -4506,11 +4777,12 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		Admin::where("id", $request->id)->update([
-			'name' => $request->name,
-			'email' => $request->email,
-			'password' => Hash::make($request->password),
-		]);
+		$EditEmp = Admin::findOrFail($request->id);
+		$EditEmp->update($request->all());
+		$getdata = $EditEmp->getChanges();
+
+		$this->helper->ActivityLog($request->id, "Edit Employee", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Employee", json_encode($getdata), "Update");
+
 		return $this->response("Update Employee Successfully", false);
 	}
 
@@ -4527,6 +4799,8 @@ class AdminAPIController extends Controller
 		}
 
 		Admin::where('id', $request->id)->delete();
+
+		$this->helper->ActivityLog($request->id, "Delete Employee", date('Y-m-d'), "", $this->user->name, "Employee", "", "Delete");
 		return $this->response("Admin Delete Successfully");
 	}
 
@@ -4544,9 +4818,12 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		Admin::where("id", $request->id)->update([
-			'status' => isset($request->status) ? $request->status : 0,
-		]);
+		$EditEmp = Admin::findOrFail($request->id);
+		$EditEmp->update($request->all());
+		$getdata = $EditEmp->getChanges();
+
+		$this->helper->ActivityLog($request->id, "Change Status Employee", date('Y-m-d'), json_encode(array('status' => $request->status)), $this->user->name, "Employee", json_encode($getdata), "Change Status");
+
 		return $this->response("Status Change Successfully", false);
 	}
 
