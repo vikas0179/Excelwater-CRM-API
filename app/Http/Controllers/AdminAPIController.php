@@ -3857,6 +3857,15 @@ class AdminAPIController extends Controller
 		$invoices = Invoice::where('void_status', 0)->orderBy("id", "DESC")->paginate(100);
 		if (!empty($invoices)) {
 			foreach ($invoices as $invoice) {
+
+				if ($invoice->transaction_type == 1) {
+					$payment_status = "Complete";
+				} elseif ($invoice->transaction_type == 0 && empty($invoice->remaining_amount)) {
+					$payment_status = "Pending";
+				} else {
+					$payment_status = "Partial Payment";
+				}
+				$invoice->payment_status = $payment_status;
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
 				$invoice->invoice_detail = \App\Models\InvoiceItem::leftJoin('product_stock', function ($join) {

@@ -176,5 +176,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
 		Route::get('get_product_report', [AdminAPIController::class, 'GetProductReportDashboard']);
 		Route::get('get_material_report', [AdminAPIController::class, 'GetMaterialReportDashboard']);
+
+
+
+
+		// App
+		Route::get('draft_invoice', [AdminAPIController::class, 'DraftInvoice']);
+		Route::post('save_invoice', [AdminAPIController::class, 'SaveInvoice']);
+
 	});
 });
