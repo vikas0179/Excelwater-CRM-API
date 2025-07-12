@@ -3595,7 +3595,33 @@ class AdminAPIController extends Controller
 		}
 
 		if (!empty($id)) {
-			return $this->response("Raw Material Order Add Successfully.", false);
+			$OrderList = Order::Join('supplier', 'supplier.id', '=', 'order.supplier_id')->where('order.id', $id)->select('order.supplier_id', 'order.order_id', 'order.order_number', 'supplier.name as supplier_name', 'supplier.email as supplier_email')->first();
+			$OrderItemList = OrderItem::where('order_id', $id)->get();
+			$html = view('emails.order', compact('OrderItemList', 'OrderList'))->render();
+
+			$mail = new PHPMailer(true);
+			try {
+				$mail->SMTPDebug = 0;
+				$mail->isSMTP();
+				$mail->Host = env('MAIL_HOST');
+				$mail->SMTPAuth = true;
+				$mail->Username = env('MAIL_USERNAME');
+				$mail->Password = env('MAIL_PASSWORD');
+				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
+				$mail->Port = env('MAIL_PORT');
+				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+				$mail->addAddress($OrderList->supplier_email);
+				$mail->isHTML(true);
+				$mail->Subject = "Order";
+				$mail->Body = $html;
+				if (!$mail->send()) {
+					return $this->response($mail->ErrorInfo, true);
+				} else {
+					return $this->response("Raw Material Order Add Successfully.", false);
+				}
+			} catch (Exception $e) {
+				return $this->response("Message could not be sent.", true);
+			}
 		} else {
 			return $this->response("Raw Material Order Error.", true);
 		}
@@ -3725,7 +3751,35 @@ class AdminAPIController extends Controller
 			}
 		}
 
-		return $this->response("Raw Material Order Update Successfully.", false);
+		if (!empty($id)) {
+			$OrderList = Order::Join('supplier', 'supplier.id', '=', 'order.supplier_id')->where('order.id', $request->id)->select('order.supplier_id', 'order.order_id', 'order.order_number', 'supplier.name as supplier_name', 'supplier.email as supplier_email')->first();
+			$OrderItemList = OrderItem::where('order_id', $request->id)->get();
+			$html = view('emails.order', compact('OrderItemList', 'OrderList'))->render();
+
+			$mail = new PHPMailer(true);
+			try {
+				$mail->SMTPDebug = 0;
+				$mail->isSMTP();
+				$mail->Host = env('MAIL_HOST');
+				$mail->SMTPAuth = true;
+				$mail->Username = env('MAIL_USERNAME');
+				$mail->Password = env('MAIL_PASSWORD');
+				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
+				$mail->Port = env('MAIL_PORT');
+				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+				$mail->addAddress($OrderList->supplier_email);
+				$mail->isHTML(true);
+				$mail->Subject = "Order";
+				$mail->Body = $html;
+				if (!$mail->send()) {
+					return $this->response($mail->ErrorInfo, true);
+				} else {
+					return $this->response("Raw Material Order Add Successfully.", false);
+				}
+			} catch (Exception $e) {
+				return $this->response("Message could not be sent.", true);
+			}
+		}
 	}
 
 	public function edit_order_details(Request $request)
@@ -3974,7 +4028,8 @@ class AdminAPIController extends Controller
 					if (!$mail->send()) {
 						return $this->response($mail->ErrorInfo, true);
 					} else {
-						return $this->response("Email has been sent.", false);
+						$invoiceInsertAry = array('id' => $id, 'send_status' => $is_send_mail);
+						return $this->response("Email has been sent.", false, $invoiceInsertAry);
 					}
 				} catch (Exception $e) {
 					return $this->response("Message could not be sent.", true);
@@ -4159,7 +4214,8 @@ class AdminAPIController extends Controller
 				if (!$mail->send()) {
 					return $this->response($mail->ErrorInfo, true);
 				} else {
-					return $this->response("Email has been sent.", false);
+					$invoiceInsertAry = array('id' => $request->id, 'send_status' => $is_send_mail);
+					return $this->response("Email has been sent.", false, $invoiceInsertAry);
 				}
 			} catch (Exception $e) {
 				return $this->response("Message could not be sent.", true);
@@ -4662,54 +4718,67 @@ class AdminAPIController extends Controller
 	public function GetProductReportDashboard()
 	{
 		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
-			->select('product_master.product_name', 'product_master.min_alert_qty', 'product_master.id')
+			->select('product_master.id', 'product_master.product_name', 'product_master.min_alert_qty', 'product_master.min_alert_qty')
 			->groupBy('product_master.id')
-			->paginate(10);
+			->get();
+
+		$NewAry = [];
 		if (!empty($ProductMasterList)) {
 			foreach ($ProductMasterList as $ProductMaster) {
 				$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
-				$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
-				unset($ProductMaster->id);
+				$ProductMaster->stock_qty = $stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
+				$min_alert_qty = $ProductMaster->min_alert_qty;
+				if ($stock_qty <= $min_alert_qty) {
+					$NewAry[] = $ProductMaster;
+				}
 			}
 		}
-		if (!empty($ProductMasterList)) {
-			return $this->response("", false, $ProductMasterList);
+
+		if (!empty($NewAry)) {
+			return $this->response("", false, $NewAry);
 		} else {
-			return $this->response("Not Found Product Stock Alert.", true);
+			return $this->response("Not Found Product List.", true);
 		}
 	}
 
 	public function GetMaterialReportDashboard()
 	{
-		$SparePartsData = SpareParts::select('id', 'part_name', 'opening_stock', 'min_alert_qty')->orderBy("part_name", "asc")->paginate(10);
-		if (!$SparePartsData->isEmpty()) {
-			foreach ($SparePartsData as $sparePart) {
-				$orderItemData = OrderItem::where('item', $sparePart->part_name)->select(DB::raw("SUM(delivery_qty) as total_delivery_qty"),)->first();
-				$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
-				$opening_stock = (!empty($sparePart->opening_stock)) ? $sparePart->opening_stock : 0;
-				$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
-				// Total Delivery qty
-				$totalSparePartQty = 0;
-				$productMasters = ProductMaster::all();
-				foreach ($productMasters as $product) {
-					if (!empty($product->spare_parts)) {
-						$sparePartsArr = json_decode($product->spare_parts, true);
-						foreach ($sparePartsArr as $part) {
-							if ($part['spare_parts_id'] == $sparePart->id) {
-								$totalSparePartQty += $part['qty'];
-							}
-						}
-					}
+		$SparePartsData = SpareParts::select('id', 'part_name', 'min_alert_qty', 'stock_qty', 'opening_stock')->get();
+		$productMasters = ProductMaster::all();
+		$orderItems = OrderItem::select('item', DB::raw('SUM(delivery_qty) as total_delivery_qty'))->groupBy('item')->pluck('total_delivery_qty', 'item');
+
+		$sparePartUsage = [];
+		foreach ($productMasters as $product) {
+			if (!empty($product->spare_parts)) {
+				$sparePartsArr = json_decode($product->spare_parts, true);
+				foreach ($sparePartsArr as $part) {
+					$sparePartUsage[$part['spare_parts_id']] = ($sparePartUsage[$part['spare_parts_id']] ?? 0) + $part['qty'];
 				}
-				unset($sparePart->id);
-				$sparePart->stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
 			}
 		}
 
+		$NewAry = [];
 		if (!$SparePartsData->isEmpty()) {
-			return $this->response("", false, $SparePartsData);
+			foreach ($SparePartsData as $sparePart) {
+				$total_delivery_qty = $orderItems[$sparePart->part_name] ?? 0;
+				$opening_stock = $sparePart->opening_stock ?? 0;
+				$total_opening_and_delivery_qty = $total_delivery_qty + $opening_stock;
+
+				$totalSparePartQty = $sparePartUsage[$sparePart->id] ?? 0;
+				$sparePart->stock_qty = $stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
+
+				$min_alert_qty = $sparePart->min_alert_qty;
+				unset($sparePart->id);
+				if ($stock_qty <= $min_alert_qty) {
+					$NewAry[] = $sparePart;
+				}
+			}
+		}
+
+		if (!empty($NewAry)) {
+			return $this->response(null, false, $NewAry);
 		} else {
-			return $this->response("Not Found Material Stock Alert.", true);
+			return $this->response(null, true);
 		}
 	}
 
