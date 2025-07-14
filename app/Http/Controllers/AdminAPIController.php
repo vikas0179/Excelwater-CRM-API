@@ -4135,6 +4135,7 @@ class AdminAPIController extends Controller
 		$EditInvoiceData->bill_to = (!empty($request->bill_to)) ? $request->bill_to : NULL;
 		$EditInvoiceData->invoice_date = date('Y-m-d', strtotime($request->invoice_date));
 		$EditInvoiceData->desc = $request->description;
+		$EditInvoiceData->save_send = $is_send_mail;
 		$EditInvoiceData->save();
 		$getdata = $EditInvoiceData->getChanges();
 
