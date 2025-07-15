@@ -195,17 +195,20 @@ class HomeController extends Controller
                             ->groupBy('PS.product_id')
                             ->first();
 
-                        $totalAmount += isset($productStocks->price) ? $productStocks->price : 0;
+                        $qty = isset($product['product_stock_id']) ? count($product['product_stock_id']) : 1;
+                        $price = isset($productStocks->price) ? $productStocks->price : 0;
+                        $amount = ($price * $qty);
+                        $totalAmount += $amount;
                         $InvoiceItemData = new InvoiceItem();
-                        $InvoiceItemData->created_at =  date("Y-m-d H:i:s");
-                        $InvoiceItemData->updated_at =  date("Y-m-d H:i:s");
+                        $InvoiceItemData->created_at = date("Y-m-d H:i:s");
+                        $InvoiceItemData->updated_at = date("Y-m-d H:i:s");
                         $InvoiceItemData->invoice_id = $invoice_id;
                         $InvoiceItemData->product_id = $productStocks->product_id;
                         $InvoiceItemData->product_stock_id = $product_stock_id;
                         $InvoiceItemData->item = $productStocks->product_name;
-                        $InvoiceItemData->qty = 1;
-                        $InvoiceItemData->rate = isset($productStocks->price) ? $productStocks->price : 0;
-                        $InvoiceItemData->amount = isset($productStocks->price) ? $productStocks->price : 0;
+                        $InvoiceItemData->qty = $qty;
+                        $InvoiceItemData->rate = $price;
+                        $InvoiceItemData->amount = $amount;
                         $InvoiceItemData->save();
                     }
                 }
