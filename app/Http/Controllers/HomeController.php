@@ -140,8 +140,8 @@ class HomeController extends Controller
     public function DraftInvoice()
     {
         $ProductMasterList = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')
-            // ->where('invoice.transaction_type', 1)
             ->select('invoice.id', 'invoice.invoice_no', 'users.name as customer_name')
+            ->orderBy("id", "DESC")
             ->get();
 
         if (!empty($ProductMasterList) && count($ProductMasterList) > 0) {
@@ -171,32 +171,50 @@ class HomeController extends Controller
         $ProductCodeExit = [];
         if (!empty($product_codes)) {
             foreach ($product_codes as $product_code) {
-                $GetProductStockID = ProductStock::where('product_code', $product_code)->select('id')->first();
+                $GetProductStockID = ProductStock::where('product_code', $product_code)->select('id', 'product_id')->first();
+                $GetProductStockID->status = 1;
+                $GetProductStockID->save();
                 if (!empty($GetProductStockID->id)) {
-                    if (isset($ProductCodeExit[$GetProductStockID->id])) {
-                        $ProductCodeExit[$GetProductStockID->id] += 1;
+                    if (isset($ProductCodeExit[$GetProductStockID->product_id])) {
+                        $ProductCodeExit[$GetProductStockID->product_id]['product_stock_id'][] = $GetProductStockID->id;
                     } else {
-                        $ProductCodeExit[$GetProductStockID->id] = 1;
+                        $ProductCodeExit[$GetProductStockID->product_id]['product_stock_id'] = [$GetProductStockID->id];
                     }
                 }
             }
 
-            $InvoiceItemList = InvoiceItem::where('invoice_id', $invoice_id)->select('id', 'qty', 'product_stock_id')->get();
-            if (!empty($InvoiceItemList) && count($InvoiceItemList) > 0) {
-                foreach ($InvoiceItemList as $key => $item) {
-                    $product_stock_ids = explode(',', $item['product_stock_id']);
-                    $total_qty = 0;
-                    foreach ($product_stock_ids as $pid) {
-                        $pid = (int)$pid;
-                        if (isset($ProductCodeExit[$pid])) {
-                            $total_qty += $ProductCodeExit[$pid];
-                        }
-                    }
-                    $item->qty = ($item->qty + $total_qty);
-                    $item->save();
-                }
-            }
+            if (!empty($ProductCodeExit)) {
+                $totalAmount = 0;
+                foreach ($ProductCodeExit as $product) {
+                    if (!empty($product['product_stock_id'])) {
+                        $product_stock_id = implode(',', $product['product_stock_id']);
+                        $productStocks = DB::table('product_stock as PS')
+                            ->select('PS.id', 'PM.id as product_id', 'PM.product_name', 'PM.price')
+                            ->join('product_master as PM', 'PM.id', '=', 'PS.product_id')
+                            ->whereIn('PS.id', [$product_stock_id])
+                            ->groupBy('PS.product_id')
+                            ->first();
 
+                        $totalAmount += isset($productStocks->price) ? $productStocks->price : 0;
+                        $InvoiceItemData = new InvoiceItem();
+                        $InvoiceItemData->created_at =  date("Y-m-d H:i:s");
+                        $InvoiceItemData->updated_at =  date("Y-m-d H:i:s");
+                        $InvoiceItemData->invoice_id = $invoice_id;
+                        $InvoiceItemData->product_id = $productStocks->product_id;
+                        $InvoiceItemData->product_stock_id = $product_stock_id;
+                        $InvoiceItemData->item = $productStocks->product_name;
+                        $InvoiceItemData->qty = 1;
+                        $InvoiceItemData->rate = isset($productStocks->price) ? $productStocks->price : 0;
+                        $InvoiceItemData->amount = isset($productStocks->price) ? $productStocks->price : 0;
+                        $InvoiceItemData->save();
+                    }
+                }
+
+                $EditInvoice = Invoice::where('id', $invoice_id)->first();
+                $in['sub_total'] = $totalAmount;
+                $in['total_amount'] = $totalAmount;
+                $EditInvoice->update($in);
+            }
             return $this->response("Successfully Changed!", false);
         } else {
             return $this->response("Error!", true);

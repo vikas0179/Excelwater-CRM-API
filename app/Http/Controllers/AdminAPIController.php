@@ -3629,7 +3629,7 @@ class AdminAPIController extends Controller
 
 	public function orders()
 	{
-		$orderData = Order::paginate(100);
+		$orderData = Order::orderBy("id", "DESC")->paginate(100);
 		if (!empty($orderData)) {
 			foreach ($orderData as $order) {
 				$supplier = Supplier::find($order->supplier_id);
@@ -3868,6 +3868,9 @@ class AdminAPIController extends Controller
 				$invoice->payment_status = $payment_status;
 				$userData = User::where('id', $invoice->customer_id)->first();
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
+				$receiving_payment = Transaction::where('invoice_id', $invoice->id)->select(DB::raw('SUM(amount) as receivingpayment'))->first();
+				$ReceivingPayment = isset($receiving_payment->receivingpayment) && !empty($receiving_payment->receivingpayment) ? $receiving_payment->receivingpayment : NULL;
+				$invoice->receiving_payment = $ReceivingPayment;
 				$invoice->invoice_detail = \App\Models\InvoiceItem::leftJoin('product_stock', function ($join) {
 					$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
 				})
@@ -3917,19 +3920,11 @@ class AdminAPIController extends Controller
 	public function add_invoice(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
-			'invoice_date' => 'required',
-			'product_id' => 'required',
-			'item' => 'required|array',
-			'qty' => 'required|array',
-			'rate' => 'required|array',
 			'description' => 'required',
+			'invoice_date' => 'required',
 			'invoice_no' => 'required|nullable|digits:6|numeric|unique:invoice,invoice_no',
 		], [
 			'invoice_date.required' => 'Please Select Invoice Date',
-			'product_id.required' => 'Please Select Product Name',
-			'item.required' => 'Please Enter Item',
-			'qty.required' => 'Please Enter Quantity',
-			'rate.required' => 'Please Enter Rate',
 			'description.required' => 'Please Enter Description',
 			'invoice_no.digits' => 'Invoice Number must be 6 digits',
 			'invoice_no.numeric' => 'Invoice Number must be a number',
@@ -4108,18 +4103,10 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'id' => 'required',
 			'invoice_date' => 'required',
-			'product_id' => 'required',
-			'item' => 'required',
-			'qty' => 'required',
-			'rate' => 'required',
 			'description' => 'required',
 		], [
 			'id.required' => 'ID Is Required',
 			'invoice_date.required' => 'Please Select Invoice Date',
-			'product_id.required' => 'Please Select Product Name',
-			'item.required' => 'Please Enter Item',
-			'qty.required' => 'Please Enter Quantity',
-			'rate.required' => 'Please Enter Rate',
 			'description.required' => 'Please Enter Description',
 		]);
 
@@ -4965,6 +4952,4 @@ class AdminAPIController extends Controller
 			return $this->response("Product Stock Not Found", true);
 		}
 	}
-
-
 }
