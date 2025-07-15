@@ -23,6 +23,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 	Route::post('get_invoice_detail_old', [HomeController::class, 'GetInvoiceDetailOld']);
 	Route::post('get_invoice_detail', [HomeController::class, 'GetInvoiceDetail']);
 
+	Route::get('draft_invoice', [HomeController::class, 'DraftInvoice']);
+	Route::post('save_invoice', [HomeController::class, 'SaveInvoice']);
+
 	Route::post('login', [AdminAPIController::class, 'login']);
 	Route::post('/', [AdminAPIController::class, 'login']);
 
@@ -176,13 +179,5 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
 		Route::get('get_product_report', [AdminAPIController::class, 'GetProductReportDashboard']);
 		Route::get('get_material_report', [AdminAPIController::class, 'GetMaterialReportDashboard']);
-
-
-
-
-		// App
-		Route::get('draft_invoice', [AdminAPIController::class, 'DraftInvoice']);
-		Route::post('save_invoice', [AdminAPIController::class, 'SaveInvoice']);
-
 	});
 });
