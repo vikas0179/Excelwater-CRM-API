@@ -233,13 +233,13 @@ class HomeController extends Controller
         try {
             $mail->SMTPDebug = 0;
             $mail->isSMTP();
-            $mail->Host = env('MAIL_HOST');
+            $mail->Host = "smtp.excelwater.ca";
             $mail->SMTPAuth = true;
-            $mail->Username = env('MAIL_USERNAME');
-            $mail->Password = env('MAIL_PASSWORD');
-            $mail->SMTPSecure = env('MAIL_ENCRYPTION');
-            $mail->Port = env('MAIL_PORT');
-            $mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+            $mail->Username = "info@excelwater.ca";
+            $mail->Password = "fK!zzHTQ7";
+            $mail->SMTPSecure = "tls";
+            $mail->Port = 587;
+            $mail->setFrom("info@excelwater.ca", "Kent Water Purification Systems");
             $mail->addAddress("chauhandharmesh8957@gmail.com");
             $mail->isHTML(true);
             $mail->Subject = "Testing";
