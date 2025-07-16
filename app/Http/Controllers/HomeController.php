@@ -32,6 +32,8 @@ use App\Models\InvoiceItem;
 use App\Models\ProductStock;
 use Carbon\Carbon;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use PHPMailer\PHPMailer\PHPMailer;
+use PhpOffice\PhpSpreadsheet\Reader\Exception;
 
 class HomeController extends Controller
 {
@@ -221,6 +223,34 @@ class HomeController extends Controller
             return $this->response("Successfully Changed!", false);
         } else {
             return $this->response("Error!", true);
+        }
+    }
+
+
+    public function MailSend()
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->SMTPDebug = 0;
+            $mail->isSMTP();
+            $mail->Host = env('MAIL_HOST');
+            $mail->SMTPAuth = true;
+            $mail->Username = env('MAIL_USERNAME');
+            $mail->Password = env('MAIL_PASSWORD');
+            $mail->SMTPSecure = env('MAIL_ENCRYPTION');
+            $mail->Port = env('MAIL_PORT');
+            $mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+            $mail->addAddress("chauhandharmesh8957@gmail.com");
+            $mail->isHTML(true);
+            $mail->Subject = "Testing";
+            $mail->Body = "Mail Body";
+            if (!$mail->send()) {
+                return $this->response($mail->ErrorInfo, true);
+            } else {
+                return $this->response("Email has been sent.", false);
+            }
+        } catch (Exception $e) {
+            return $this->response("Message could not be sent.", true);
         }
     }
 }

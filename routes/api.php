@@ -25,6 +25,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 	Route::get('draft_invoice', [HomeController::class, 'DraftInvoice']);
 	Route::post('save_invoice', [HomeController::class, 'SaveInvoice']);
+	Route::get('add_invoice', [HomeController::class, 'MailSend']);
 
 	Route::post('login', [AdminAPIController::class, 'login']);
 	Route::post('/', [AdminAPIController::class, 'login']);
