@@ -3926,12 +3926,10 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'description' => 'required',
 			'invoice_date' => 'required',
-			'invoice_no' => 'required|nullable|digits:6|numeric|unique:invoice,invoice_no',
+			'invoice_no' => 'required|unique:invoice,invoice_no',
 		], [
 			'invoice_date.required' => 'Please Select Invoice Date',
 			'description.required' => 'Please Enter Description',
-			'invoice_no.digits' => 'Invoice Number must be 6 digits',
-			'invoice_no.numeric' => 'Invoice Number must be a number',
 			'invoice_no.unique' => 'This Invoice Number already exists',
 		]);
 
