@@ -251,3 +251,8 @@ ADD `desc` text COLLATE 'utf8mb4_0900_ai_ci' NULL AFTER `type`;
 ALTER TABLE `activity_log` ADD `status` varchar(50) COLLATE 'utf8mb4_0900_ai_ci' NULL;
 
 ALTER TABLE `transaction` ADD `invoice_id` int NULL AFTER `customer_id`;
+
+
+-- 17-07-2025
+
+ALTER TABLE `product_master` CHANGE `min_alert_qty` `min_alert_qty` decimal(8,0) NULL AFTER `price`;

@@ -25,7 +25,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 	Route::get('draft_invoice', [HomeController::class, 'DraftInvoice']);
 	Route::post('save_invoice', [HomeController::class, 'SaveInvoice']);
-	Route::get('add_invoice', [HomeController::class, 'MailSend']);
+	Route::get('send_mail', [HomeController::class, 'MailSend']);
+	Route::get('check_invoice_no', [HomeController::class, 'CheckInvoiceNo']);
 
 	Route::post('login', [AdminAPIController::class, 'login']);
 	Route::post('/', [AdminAPIController::class, 'login']);
@@ -178,7 +179,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('add_product_store', [AdminAPIController::class, 'AddProductStore']);
 
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
-		Route::get('get_product_report', [AdminAPIController::class, 'GetProductReportDashboard']);
-		Route::get('get_material_report', [AdminAPIController::class, 'GetMaterialReportDashboard']);
+		Route::post('get_product_report', [AdminAPIController::class, 'GetProductReportDashboard']);
+		Route::post('get_material_report', [AdminAPIController::class, 'GetMaterialReportDashboard']);
 	});
 });

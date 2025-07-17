@@ -15,6 +15,7 @@ class ProductMaster extends Model
         'desc',
         'image',
         'spare_parts',
+        'min_alert_qty',
 	];
 	
 	protected $casts = [

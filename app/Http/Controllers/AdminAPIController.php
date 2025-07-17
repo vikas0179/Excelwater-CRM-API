@@ -51,6 +51,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Helper;
 use App\Models\ActivityLog;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class AdminAPIController extends Controller
 {
@@ -2934,6 +2936,7 @@ class AdminAPIController extends Controller
 				DB::raw('GROUP_CONCAT(spare_parts.part_name SEPARATOR " | ") as spare_part_names ')
 			)
 			->groupBy('supplier.id')
+			->orderBy("supplier.id", "DESC")
 			->paginate(100);
 
 		if (!empty($supplierList)) {
@@ -3108,6 +3111,7 @@ class AdminAPIController extends Controller
 		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
 			->select('product_master.*', DB::raw("SUM(invoice_item.amount) as final_price"))
 			->groupBy('product_master.id')
+			->orderBy("product_master.id", "DESC")
 			->paginate(100);
 
 		if (!empty($ProductMasterList)) {
@@ -3316,7 +3320,7 @@ class AdminAPIController extends Controller
 	// Spare Part
 	public function spare_parts()
 	{
-		$SparePartsData = SpareParts::orderBy("part_name", "asc")->paginate(100);
+		$SparePartsData = SpareParts::orderBy("id", "DESC")->paginate(100);
 
 		if (!$SparePartsData->isEmpty()) {
 			foreach ($SparePartsData as $sparePart) {
@@ -4492,7 +4496,7 @@ class AdminAPIController extends Controller
 	// Customers
 	public function GetUsers()
 	{
-		$userList = User::where('status', 1)->paginate(100);
+		$userList = User::where('status', 1)->orderBy("id", "DESC")->paginate(100);
 		if (!empty($userList)) {
 			foreach ($userList as &$user) {
 				$user->bcc = (!empty($user->bcc)) ? explode(',', $user->bcc) : null;
@@ -4708,37 +4712,51 @@ class AdminAPIController extends Controller
 		}
 	}
 
-	public function GetProductReportDashboard()
+	public function GetProductReportDashboard(Request $request)
 	{
+		$perPage = 25;
+		$page = $request->input('page', 1);
+
 		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
-			->select('product_master.id', 'product_master.product_name', 'product_master.min_alert_qty', 'product_master.min_alert_qty')
+			->select('product_master.id', 'product_master.product_name', 'product_master.min_alert_qty')
 			->groupBy('product_master.id')
 			->get();
 
-		$NewAry = [];
-		if (!empty($ProductMasterList)) {
-			foreach ($ProductMasterList as $ProductMaster) {
-				$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
-				$ProductMaster->stock_qty = $stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
-				$min_alert_qty = $ProductMaster->min_alert_qty;
-				if ($stock_qty <= $min_alert_qty) {
-					$NewAry[] = $ProductMaster;
-				}
+		$FilteredList = collect();
+		foreach ($ProductMasterList as $ProductMaster) {
+			$stock_qty = ProductStock::where('status', 0)
+				->where('product_id', $ProductMaster->id)
+				->select(DB::raw("COUNT(id) as total_qty"))
+				->first();
+
+			$ProductMaster->stock_qty = $qty = $stock_qty->total_qty ?? 0;
+			$min_alert_qty = $ProductMaster->min_alert_qty;
+			if ($qty <= $min_alert_qty) {
+				$FilteredList->push($ProductMaster);
 			}
 		}
 
-		if (!empty($NewAry)) {
-			return $this->response(NULL, false, $NewAry);
-		} else {
-			return $this->response(NULL, true);
-		}
+		$total = $FilteredList->count();
+		$results = $FilteredList->forPage($page, $perPage)->values();
+
+		$paginated = new LengthAwarePaginator($results, $total, $perPage, $page, [
+			'path' => $request->url(),
+			'query' => $request->query(),
+		]);
+
+		return $this->response(null, !$results->isEmpty(), $paginated);
 	}
 
-	public function GetMaterialReportDashboard()
+	public function GetMaterialReportDashboard(Request $request)
 	{
+		$perPage = 25;
+		$page = $request->input('page', 1);
+
 		$SparePartsData = SpareParts::select('id', 'part_name', 'min_alert_qty', 'stock_qty', 'opening_stock')->get();
 		$productMasters = ProductMaster::all();
-		$orderItems = OrderItem::select('item', DB::raw('SUM(delivery_qty) as total_delivery_qty'))->groupBy('item')->pluck('total_delivery_qty', 'item');
+		$orderItems = OrderItem::select('item', DB::raw('SUM(delivery_qty) as total_delivery_qty'))
+			->groupBy('item')
+			->pluck('total_delivery_qty', 'item');
 
 		$sparePartUsage = [];
 		foreach ($productMasters as $product) {
@@ -4750,29 +4768,31 @@ class AdminAPIController extends Controller
 			}
 		}
 
-		$NewAry = [];
-		if (!$SparePartsData->isEmpty()) {
-			foreach ($SparePartsData as $sparePart) {
-				$total_delivery_qty = $orderItems[$sparePart->part_name] ?? 0;
-				$opening_stock = $sparePart->opening_stock ?? 0;
-				$total_opening_and_delivery_qty = $total_delivery_qty + $opening_stock;
+		$FilteredParts = collect();
+		foreach ($SparePartsData as $sparePart) {
+			$total_delivery_qty = $orderItems[$sparePart->part_name] ?? 0;
+			$opening_stock = $sparePart->opening_stock ?? 0;
+			$total_opening_and_delivery_qty = $total_delivery_qty + $opening_stock;
 
-				$totalSparePartQty = $sparePartUsage[$sparePart->id] ?? 0;
-				$sparePart->stock_qty = $stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
+			$totalSparePartQty = $sparePartUsage[$sparePart->id] ?? 0;
+			$sparePart->stock_qty = $stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
 
-				$min_alert_qty = $sparePart->min_alert_qty;
-				unset($sparePart->id);
-				if ($stock_qty <= $min_alert_qty) {
-					$NewAry[] = $sparePart;
-				}
+			$min_alert_qty = $sparePart->min_alert_qty;
+			unset($sparePart->id);
+
+			if ($stock_qty <= $min_alert_qty) {
+				$FilteredParts->push($sparePart);
 			}
 		}
 
-		if (!empty($NewAry)) {
-			return $this->response(null, false, $NewAry);
-		} else {
-			return $this->response(null, true);
-		}
+		$total = $FilteredParts->count();
+		$results = $FilteredParts->forPage($page, $perPage)->values();
+		$paginated = new LengthAwarePaginator($results, $total, $perPage, $page, [
+			'path' => $request->url(),
+			'query' => $request->query(),
+		]);
+
+		return $this->response(null, !$results->isEmpty(), $paginated);
 	}
 
 
@@ -4784,7 +4804,7 @@ class AdminAPIController extends Controller
 		if ($user->role != 0) {
 			return $this->response("Access denied", true);
 		}
-		$AdminList = Admin::where('role', 1)->paginate(20);
+		$AdminList = Admin::where('role', 1)->orderBy("id", "DESC")->paginate(20);
 		if (!empty($AdminList) && count($AdminList) > 0) {
 			return $this->response("", false, $AdminList);
 		} else {

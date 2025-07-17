@@ -239,7 +239,7 @@ class HomeController extends Controller
             $mail->Password = "fK!zzHTQ7";
             $mail->SMTPSecure = "tls";
             $mail->Port = 587;
-            $mail->setFrom("info@excelwater.ca", "Kent Water Purification Systems");
+            $mail->setFrom("info@excelwater.ca", "Excel Water System");
             $mail->addAddress("chauhandharmesh8957@gmail.com");
             $mail->isHTML(true);
             $mail->Subject = "Testing";
@@ -252,5 +252,23 @@ class HomeController extends Controller
         } catch (Exception $e) {
             return $this->response("Message could not be sent.", true);
         }
+    }
+
+    public function CheckInvoiceNo()
+    {
+        $LastRecordCheck = Invoice::whereDate('created_at', date('Y-m-d'))->orderBy("id", "DESC")->first();
+
+        if (empty($LastRecordCheck)) {
+            $GenerateInvoiceNumber = date("mdY") . "1";
+        } else {
+            $orderNumber = substr($LastRecordCheck->invoice_no, 7);
+            $IncreseInvoiceNumber = str_pad(((int)$orderNumber + 1), strlen($orderNumber), '0', STR_PAD_LEFT);
+            $GenerateInvoiceNumber = date("mdY") . $IncreseInvoiceNumber;
+        }
+
+        $data = array(
+            'invoice_no' => $GenerateInvoiceNumber,
+        );
+        return $this->response("", false, $data);
     }
 }
