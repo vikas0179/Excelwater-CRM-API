@@ -4712,7 +4712,7 @@ class AdminAPIController extends Controller
 
 	public function GetProductReportDashboard(Request $request)
 	{
-		$perPage = 25;
+		$perPage = 5;
 		$page = $request->input('page', 1);
 
 		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
@@ -4747,7 +4747,7 @@ class AdminAPIController extends Controller
 
 	public function GetMaterialReportDashboard(Request $request)
 	{
-		$perPage = 25;
+		$perPage = 5;
 		$page = $request->input('page', 1);
 
 		$SparePartsData = SpareParts::select('id', 'part_name', 'min_alert_qty', 'stock_qty', 'opening_stock')->get();
