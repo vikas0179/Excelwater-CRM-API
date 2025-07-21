@@ -2993,7 +2993,7 @@ class AdminAPIController extends Controller
 		]);
 
 		if (!empty($last_id)) {
-			$this->helper->ActivityLog($last_id->id, "Add Supplier", date('Y-m-d'), json_encode($last_id), $this->user->name, "Supplier", "", "Create");
+			$this->helper->ActivityLog($last_id->id, "Add Supplier", date('Y-m-d'), json_encode($last_id), $this->user->name, "Master > Supplier", "", "Create");
 			return $this->response("Supplier Add Successfully.", false);
 		} else {
 			return $this->response("Supplier Add Error.", true);
@@ -3044,7 +3044,7 @@ class AdminAPIController extends Controller
 		$supplierData->update($in);
 		$getdata = $supplierData->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Edit Supplier", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Supplier", json_encode($getdata), "Update");
+		$this->helper->ActivityLog($request->id, "Edit Supplier", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Supplier", json_encode($getdata), "Update");
 
 		return $this->response("Supplier Update Successfully.", false);
 	}
@@ -3063,7 +3063,7 @@ class AdminAPIController extends Controller
 
 		DB::table('supplier')->where('id', $request->id)->delete();
 
-		$this->helper->ActivityLog($request->id, "Delete Supplier", date('Y-m-d'), "", $this->user->name, "Supplier", "", "Delete");
+		$this->helper->ActivityLog($request->id, "Delete Supplier", date('Y-m-d'), "", $this->user->name, "Master > Supplier", "", "Delete");
 		return $this->response("Supplier Delete Successfully");
 	}
 
@@ -3196,7 +3196,7 @@ class AdminAPIController extends Controller
 		$pMaster->save();
 
 		if (!empty($pMaster)) {
-			$this->helper->ActivityLog($pMaster->id, "Add Product Master", date('Y-m-d'), json_encode($pMaster), $this->user->name, "Product Master", "", "Create");
+			$this->helper->ActivityLog($pMaster->id, "Add Product Master", date('Y-m-d'), json_encode($pMaster), $this->user->name, "Master > Product Master", "", "Create");
 			return $this->response("Product Add Successfully.", false);
 		} else {
 			return $this->response("Product  Error.", true);
@@ -3264,7 +3264,7 @@ class AdminAPIController extends Controller
 		$PMasterData->update($in);
 		$getdata = $PMasterData->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Product Master", json_encode($getdata), "Update");
+		$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Product Master", json_encode($getdata), "Update");
 		return $this->response("Product Master Update Successfully.", false);
 	}
 
@@ -3282,7 +3282,7 @@ class AdminAPIController extends Controller
 
 		if (ProductMaster::find($request->id)) {
 			DB::table('product_master')->where('id', $request->id)->delete();
-			$this->helper->ActivityLog($request->id, "Delete Product Master", date('Y-m-d'), "", $this->user->name, "Product Master", "", "Delete");
+			$this->helper->ActivityLog($request->id, "Delete Product Master", date('Y-m-d'), "", $this->user->name, "Master > Product Master", "", "Delete");
 			return $this->response("Product Delete Successfully", false);
 		} else {
 			return $this->response("Product Data Not Found.", true);
@@ -3395,7 +3395,7 @@ class AdminAPIController extends Controller
 		$sparePartData->save();
 
 		if ($sparePartData) {
-			$this->helper->ActivityLog($sparePartData->id, "Add Spare Part", date('Y-m-d'), json_encode($sparePartData), $this->user->name, "Spare Part", "", "Create");
+			$this->helper->ActivityLog($sparePartData->id, "Add Spare Part", date('Y-m-d'), json_encode($sparePartData), $this->user->name, "Master > Spare Part", "", "Create");
 			return $this->response("Raw Material  Add Successfully.", false);
 		} else {
 			return $this->response("Raw Material Error.", true);
@@ -3446,7 +3446,7 @@ class AdminAPIController extends Controller
 		$SPartData->update($in);
 		$getdata = $SPartData->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Edit Spare Part", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Spare Part", json_encode($getdata), "Update");
+		$this->helper->ActivityLog($request->id, "Edit Spare Part", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Spare Part", json_encode($getdata), "Update");
 		return $this->response("Raw Material Update Successfully.", false);
 	}
 
@@ -3464,7 +3464,7 @@ class AdminAPIController extends Controller
 
 		if (SpareParts::find($request->id)) {
 			DB::table('spare_parts')->where('id', $request->id)->delete();
-			$this->helper->ActivityLog($request->id, "Delete Spare Part", date('Y-m-d'), "", $this->user->name, "Spare Part", "", "Delete");
+			$this->helper->ActivityLog($request->id, "Delete Spare Part", date('Y-m-d'), "", $this->user->name, "Master > Spare Part", "", "Delete");
 			return $this->response("Raw Material Delete Successfully", false);
 		} else {
 			return $this->response("Raw Material Data Not Found.", true);
@@ -4362,7 +4362,7 @@ class AdminAPIController extends Controller
 			->where('customer_id', $id)
 			->orderBy("transaction.id", "DESC")
 			->select('users.name as customer_name', 'transaction.date', 'transaction.type', 'transaction.desc', 'transaction.amount')
-			->get();
+			->paginate(10);
 
 		$data = array(
 			'userdata' => $userData,
@@ -4834,7 +4834,7 @@ class AdminAPIController extends Controller
 		$admin->status = 1;
 		$admin->save();
 
-		$this->helper->ActivityLog($admin->id, "Add Employee", date('Y-m-d'), json_encode($admin), $this->user->name, "Employee", "", "Create");
+		$this->helper->ActivityLog($admin->id, "Add Employee", date('Y-m-d'), json_encode($admin), $this->user->name, "Master > Employee", "", "Create");
 
 		return $this->response("Added Employee Successfully", false);
 	}
@@ -4861,7 +4861,7 @@ class AdminAPIController extends Controller
 		$EditEmp->update($request->all());
 		$getdata = $EditEmp->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Edit Employee", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Employee", json_encode($getdata), "Update");
+		$this->helper->ActivityLog($request->id, "Edit Employee", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Employee", json_encode($getdata), "Update");
 
 		return $this->response("Update Employee Successfully", false);
 	}
@@ -4880,7 +4880,7 @@ class AdminAPIController extends Controller
 
 		Admin::where('id', $request->id)->delete();
 
-		$this->helper->ActivityLog($request->id, "Delete Employee", date('Y-m-d'), "", $this->user->name, "Employee", "", "Delete");
+		$this->helper->ActivityLog($request->id, "Delete Employee", date('Y-m-d'), "", $this->user->name, "Master > Employee", "", "Delete");
 		return $this->response("Admin Delete Successfully");
 	}
 
@@ -4902,7 +4902,7 @@ class AdminAPIController extends Controller
 		$EditEmp->update($request->all());
 		$getdata = $EditEmp->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Change Status Employee", date('Y-m-d'), json_encode(array('status' => $request->status)), $this->user->name, "Employee", json_encode($getdata), "Change Status");
+		$this->helper->ActivityLog($request->id, "Change Status Employee", date('Y-m-d'), json_encode(array('status' => $request->status)), $this->user->name, "Master > Employee", json_encode($getdata), "Change Status");
 
 		return $this->response("Status Change Successfully", false);
 	}

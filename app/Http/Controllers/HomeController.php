@@ -233,13 +233,13 @@ class HomeController extends Controller
         try {
             $mail->SMTPDebug = 0;
             $mail->isSMTP();
-            $mail->Host = "smtp.excelwater.ca";
+            $mail->Host = "smtp.gmail.com";
             $mail->SMTPAuth = true;
-            $mail->Username = "info@excelwater.ca";
-            $mail->Password = "fK!zzHTQ7";
+            $mail->Username = "report.alert@aspiradiagnostics.com";
+            $mail->Password = "gtrg jwaf qzcb doup";
             $mail->SMTPSecure = "tls";
             $mail->Port = 587;
-            $mail->setFrom("info@excelwater.ca", "Excel Water System");
+            $mail->setFrom("report.alert@aspiradiagnostics.com", "Excel Water System");
             $mail->addAddress("chauhandharmesh8957@gmail.com");
             $mail->isHTML(true);
             $mail->Subject = "Testing";
@@ -259,11 +259,11 @@ class HomeController extends Controller
         $LastRecordCheck = Invoice::whereDate('created_at', date('Y-m-d'))->orderBy("id", "DESC")->first();
 
         if (empty($LastRecordCheck)) {
-            $GenerateInvoiceNumber = date("mdY") . "1";
+            $GenerateInvoiceNumber = date("dmY") . "1";
         } else {
             $orderNumber = substr($LastRecordCheck->invoice_no, 7);
             $IncreseInvoiceNumber = str_pad(((int)$orderNumber + 1), strlen($orderNumber), '0', STR_PAD_LEFT);
-            $GenerateInvoiceNumber = date("mdY") . $IncreseInvoiceNumber;
+            $GenerateInvoiceNumber = date("dmY") . $IncreseInvoiceNumber;
         }
 
         $data = array(

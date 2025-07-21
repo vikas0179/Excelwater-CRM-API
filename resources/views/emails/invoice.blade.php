@@ -13,13 +13,12 @@
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div style="font-size: 14px; color: #6B7280; width:50%">
                     <span
-                        style="font-weight: bold; font-size: 18px; margin-bottom: 4px; display: block; color: #6B7280;">Excel
-                        Water System</span>
+                        style="font-weight: bold; font-size: 18px; margin-bottom: 4px; display: block; color: #6B7280;">Excel Water System</span>
                     <p style="margin: 2px 0;">31-145 Traders Blvd E</p>
                     <p style="margin: 2px 0;">Mississauga ON L4Z 3L3</p>
                     <p style="margin: 2px 0;">+1 888 622 3092</p>
-                    <p style="margin: 2px 0;">info@kentwater.ca</p>
-                    <p style="margin: 2px 0;">www.kentwater.ca</p>
+                    <p style="margin: 2px 0;">info@excelwater.ca</p>
+                    <p style="margin: 2px 0;">https://crm.excelwater.ca</p>
                     <span style="font-size: 24px; color: #0EA5E9; margin-top: 8px; display: block;">INVOICE</span>
                 </div>
                 <div style="width:50%; text-align: right;">
