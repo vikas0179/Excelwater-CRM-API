@@ -186,38 +186,78 @@ class HomeController extends Controller
             }
 
             if (!empty($ProductCodeExit)) {
-                $totalAmount = 0;
                 foreach ($ProductCodeExit as $product) {
                     if (!empty($product['product_stock_id'])) {
                         $product_stock_id = implode(',', $product['product_stock_id']);
                         $productStocks = DB::table('product_stock as PS')
-                            ->select('PS.id', 'PM.id as product_id', 'PM.product_name', 'PM.price')
+                            ->select(
+                                'PM.id as product_id',
+                                'PM.product_name',
+                                'PM.price',
+                                DB::raw('GROUP_CONCAT(PS.id) as stock_ids')
+                            )
                             ->join('product_master as PM', 'PM.id', '=', 'PS.product_id')
-                            ->whereIn('PS.id', [$product_stock_id])
-                            ->groupBy('PS.product_id')
+                            ->whereIn('PS.id', $product['product_stock_id'])
+                            ->groupBy('PM.id', 'PM.product_name', 'PM.price')
                             ->first();
 
-                        $qty = isset($product['product_stock_id']) ? count($product['product_stock_id']) : 1;
-                        $price = isset($productStocks->price) ? $productStocks->price : 0;
-                        $amount = ($price * $qty);
-                        $totalAmount += $amount;
-                        $InvoiceItemData = new InvoiceItem();
-                        $InvoiceItemData->created_at = date("Y-m-d H:i:s");
-                        $InvoiceItemData->updated_at = date("Y-m-d H:i:s");
-                        $InvoiceItemData->invoice_id = $invoice_id;
-                        $InvoiceItemData->product_id = $productStocks->product_id;
-                        $InvoiceItemData->product_stock_id = $product_stock_id;
-                        $InvoiceItemData->item = $productStocks->product_name;
-                        $InvoiceItemData->qty = $qty;
-                        $InvoiceItemData->rate = $price;
-                        $InvoiceItemData->amount = $amount;
-                        $InvoiceItemData->save();
+                        $ExitInvoiceItem = InvoiceItem::where('invoice_id', $invoice_id)->where('product_id', $productStocks->product_id)->first();
+                        if (!empty($ExitInvoiceItem)) {
+                            $exit_product_stock_id = explode(',', $ExitInvoiceItem->product_stock_id);
+                            if (!empty($exit_product_stock_id)) {
+                                // Insert
+                                $existingIds = array_map('intval', $exit_product_stock_id);
+                                $incomingIds = array_map('intval', $product['product_stock_id']);
+                                $idsToUpdate = array_intersect($incomingIds, $existingIds);
+                                $idsToInsert = array_diff($incomingIds, $existingIds);
+                                if (!empty($idsToInsert)) {
+                                    foreach ($idsToInsert as $new_stock_stock) {
+                                        $existingStockIds = !empty($ExitInvoiceItem->product_stock_id) ? array_map('intval', explode(',', $ExitInvoiceItem->product_stock_id)) : [];
+                                        if (!in_array((int)$new_stock_stock, $existingStockIds)) {
+                                            $existingStockIds[] = (int)$new_stock_stock;
+                                        }
+                                        $ExitInvoiceItem->qty = ($ExitInvoiceItem->qty + 1);
+                                        $ExitInvoiceItem->product_stock_id = implode(',', $existingStockIds);
+                                        $ExitInvoiceItem->amount = ($ExitInvoiceItem->amount + ($ExitInvoiceItem->rate * 1));
+                                        $ExitInvoiceItem->updated_at =  date("Y-m-d H:i:s");
+                                        $ExitInvoiceItem->save();
+                                    }
+                                }
+
+                                // Update
+                                foreach ($exit_product_stock_id as $stock_id) {
+                                    $exp_stock_ids = isset($productStocks->stock_ids) ? explode(',', $productStocks->stock_ids) : NULL;
+                                    if (!empty($exp_stock_ids) && in_array($stock_id, $exp_stock_ids)) {
+                                        $ExitInvoiceItem->qty = ($ExitInvoiceItem->qty + 1);
+                                        $ExitInvoiceItem->amount = ($ExitInvoiceItem->amount + ($ExitInvoiceItem->rate * 1));
+                                        $ExitInvoiceItem->updated_at =  date("Y-m-d H:i:s");
+                                        $ExitInvoiceItem->save();
+                                    }
+                                }
+                            }
+                        } else {
+                            $qty = isset($product['product_stock_id']) ? count($product['product_stock_id']) : 1;
+                            $price = isset($productStocks->price) ? $productStocks->price : 0;
+                            $amount = ($price * $qty);
+                            $InvoiceItemData = new InvoiceItem();
+                            $InvoiceItemData->created_at = date("Y-m-d H:i:s");
+                            $InvoiceItemData->updated_at = date("Y-m-d H:i:s");
+                            $InvoiceItemData->invoice_id = $invoice_id;
+                            $InvoiceItemData->product_id = $productStocks->product_id;
+                            $InvoiceItemData->product_stock_id = $product_stock_id;
+                            $InvoiceItemData->item = $productStocks->product_name;
+                            $InvoiceItemData->qty = $qty;
+                            $InvoiceItemData->rate = $price;
+                            $InvoiceItemData->amount = $amount;
+                            $InvoiceItemData->save();
+                        }
                     }
                 }
 
+                $GetInvoiceItemData = InvoiceItem::where('invoice_id', $invoice_id)->select(DB::raw('SUM(amount) as total_amount'))->first();
                 $EditInvoice = Invoice::where('id', $invoice_id)->first();
-                $in['sub_total'] = $totalAmount;
-                $in['total_amount'] = $totalAmount;
+                $in['sub_total'] = isset($GetInvoiceItemData->total_amount) ? $GetInvoiceItemData->total_amount : NULL;
+                $in['total_amount'] = isset($GetInvoiceItemData->total_amount) ? $GetInvoiceItemData->total_amount : NULL;
                 $EditInvoice->update($in);
             }
             return $this->response("Successfully Changed!", false);
@@ -225,7 +265,6 @@ class HomeController extends Controller
             return $this->response("Error!", true);
         }
     }
-
 
     public function MailSend()
     {
