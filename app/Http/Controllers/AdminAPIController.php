@@ -4806,7 +4806,7 @@ class AdminAPIController extends Controller
 		if (!empty($AdminList) && count($AdminList) > 0) {
 			return $this->response("", false, $AdminList);
 		} else {
-			return $this->response("Employee Not Found!", true);
+			return $this->response("Create Admin Not Found!", true);
 		}
 	}
 
@@ -4835,7 +4835,7 @@ class AdminAPIController extends Controller
 		$admin->status = 1;
 		$admin->save();
 
-		$this->helper->ActivityLog($admin->id, "Add Employee", date('Y-m-d'), json_encode($admin), $this->user->name, "Master > Employee", "", "Create");
+		$this->helper->ActivityLog($admin->id, "Add Create Admin", date('Y-m-d'), json_encode($admin), $this->user->name, "Master > Create Admin", "", "Create");
 
 		// Email
 		if (!empty($admin)) {
@@ -4859,7 +4859,7 @@ class AdminAPIController extends Controller
 				if (!$mail->send()) {
 					return $this->response($mail->ErrorInfo, true);
 				} else {
-					return $this->response("Added Employee Successfully", false);
+					return $this->response("Added Create Admin Successfully", false);
 				}
 			} catch (Exception $e) {
 				return $this->response("Message could not be sent.", true);
@@ -4889,9 +4889,9 @@ class AdminAPIController extends Controller
 		$EditEmp->update($request->all());
 		$getdata = $EditEmp->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Edit Employee", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Employee", json_encode($getdata), "Update");
+		$this->helper->ActivityLog($request->id, "Edit Create Admin", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Create Admin", json_encode($getdata), "Update");
 
-		return $this->response("Update Employee Successfully", false);
+		return $this->response("Update Create Admin Successfully", false);
 	}
 
 	public function DeleteEmployee(Request $request)
@@ -4908,7 +4908,7 @@ class AdminAPIController extends Controller
 
 		Admin::where('id', $request->id)->delete();
 
-		$this->helper->ActivityLog($request->id, "Delete Employee", date('Y-m-d'), "", $this->user->name, "Master > Employee", "", "Delete");
+		$this->helper->ActivityLog($request->id, "Delete Create Admin", date('Y-m-d'), "", $this->user->name, "Master > Create Admin", "", "Delete");
 		return $this->response("Admin Delete Successfully");
 	}
 
@@ -4930,7 +4930,7 @@ class AdminAPIController extends Controller
 		$EditEmp->update($request->all());
 		$getdata = $EditEmp->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Change Status Employee", date('Y-m-d'), json_encode(array('status' => $request->status)), $this->user->name, "Master > Employee", json_encode($getdata), "Change Status");
+		$this->helper->ActivityLog($request->id, "Change Status Create Admin", date('Y-m-d'), json_encode(array('status' => $request->status)), $this->user->name, "Master > Create Admin", json_encode($getdata), "Change Status");
 
 		return $this->response("Status Change Successfully", false);
 	}
