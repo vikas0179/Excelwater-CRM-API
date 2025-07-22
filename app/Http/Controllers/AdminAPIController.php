@@ -4854,7 +4854,7 @@ class AdminAPIController extends Controller
 				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 				$mail->addAddress($admin->email);
 				$mail->isHTML(true);
-				$mail->Subject = "Create Admin";
+				$mail->Subject = "New Admin user";
 				$mail->Body = $html;
 				if (!$mail->send()) {
 					return $this->response($mail->ErrorInfo, true);

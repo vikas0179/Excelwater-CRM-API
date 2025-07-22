@@ -276,7 +276,7 @@ class HomeController extends Controller
         if (empty($LastRecordCheck)) {
             $GenerateInvoiceNumber = date("dmY") . "1";
         } else {
-            $orderNumber = substr($LastRecordCheck->invoice_no, 7);
+            $orderNumber = substr($LastRecordCheck->invoice_no, 8);
             $IncreseInvoiceNumber = str_pad(((int)$orderNumber + 1), strlen($orderNumber), '0', STR_PAD_LEFT);
             $GenerateInvoiceNumber = date("dmY") . $IncreseInvoiceNumber;
         }

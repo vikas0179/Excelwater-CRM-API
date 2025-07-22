@@ -14,12 +14,12 @@
                 <div style="font-size: 14px; color: #6B7280; width:50%">
                     <span
                         style="font-weight: bold; font-size: 18px; margin-bottom: 4px; display: block; color: #6B7280;">Excel
-                        Water System</span>
+                        Water Systems</span>
                     <p style="margin: 2px 0;">31-145 Traders Blvd E</p>
                     <p style="margin: 2px 0;">Mississauga ON L4Z 3L3</p>
                     <p style="margin: 2px 0;">+1 888 622 3092</p>
                     <p style="margin: 2px 0;">info@excelwater.ca</p>
-                    <p style="margin: 2px 0;">https://crm.excelwater.ca</p>
+                    <p style="margin: 2px 0;">https://excelwater.ca</p>
                     <span style="font-size: 24px; color: #0EA5E9; margin-top: 8px; display: block;">INVOICE</span>
                 </div>
                 <div style="width:50%; text-align: right;">
@@ -59,12 +59,12 @@
                 <table style="width: 100%; font-size: 14px; border-collapse: collapse;" border="1">
                     <thead style="background-color: #F3F4F6;">
                         <tr style="background-color: #E0F2FE; color: #0EA5E9;">
-                            <th style="padding: 8px; text-align: left;">Activity</th>
-                            <th style="padding: 8px; text-align: right;">Qty</th>
-                            <th style="padding: 8px; text-align: right;">Rate</th>
-                            <th style="padding: 8px; text-align: right;">Tax</th>
-                            <th style="padding: 8px; text-align: right;">Tax Amount</th>
-                            <th style="padding: 8px; text-align: right;">Amount</th>
+                            <th style="padding: 8px; text-align: left;">Product Purchased</th>
+                            <th style="padding: 8px; text-align: center;">Qty</th>
+                            <th style="padding: 8px; text-align: center;">Rate</th>
+                            <th style="padding: 8px; text-align: center;">Tax</th>
+                            <th style="padding: 8px; text-align: center;">Tax Amount</th>
+                            <th style="padding: 8px; text-align: center;">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -91,11 +91,11 @@
                                         <?= isset($val->item) ? $val->item : '' ?> <br>
                                         {!! $productCodeSet !!}
                                     </td>
-                                    <td><?= $qty ?></td>
-                                    <td><?= '$' . $rate ?></td>
-                                    <td>HST ON</td>
-                                    <td>{{ '$' . $tax_amount }}</td>
-                                    <td><?= '$' . ($Amount + $tax_amount) ?></td>
+                                    <td style="text-align: center;"><?= $qty ?></td>
+                                    <td style="text-align: center;"><?= '$' . $rate ?></td>
+                                    <td style="text-align: center;">HST ON</td>
+                                    <td style="text-align: center;">{{ '$' . $tax_amount }}</td>
+                                    <td style="text-align: center;"><?= '$' . ($Amount + $tax_amount) ?></td>
                                 </tr>
                             @endforeach
                         @endif
