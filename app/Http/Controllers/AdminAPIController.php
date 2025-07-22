@@ -3985,7 +3985,6 @@ class AdminAPIController extends Controller
 
 		$this->helper->ActivityLog($id, "Add Invoice", date('Y-m-d'), json_encode($EditInvoiceData), $this->user->name, "Invoice", $EditInvoiceData, "Create");
 
-
 		if (!empty($id)) {
 			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email', 'users.bcc', 'users.cc')->first();
 			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
@@ -4006,8 +4005,6 @@ class AdminAPIController extends Controller
 
 				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
 				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
-				echo $html;
-				die;
 
 				$mail = new PHPMailer(true);
 				try {
@@ -4185,8 +4182,8 @@ class AdminAPIController extends Controller
 				->groupBy(DB::raw("product_stock.product_id"))
 				->get();
 			$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
-			$QrCode = QrCode::size(80)->generate($InvoiceUrl);
-			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'QrCode', 'InvoiceUrl'))->render();
+			// $QrCode = QrCode::size(80)->generate($InvoiceUrl);
+			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
 
 			$mail = new PHPMailer(true);
 			try {
@@ -4829,17 +4826,45 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
+		$Pass = $request->password;
 		$admin = new Admin();
 		$admin->name = $request->name;
 		$admin->email = $request->email;
-		$admin->password = Hash::make($request->password);
+		$admin->password = Hash::make($Pass);
 		$admin->role = 1;
 		$admin->status = 1;
 		$admin->save();
 
 		$this->helper->ActivityLog($admin->id, "Add Employee", date('Y-m-d'), json_encode($admin), $this->user->name, "Master > Employee", "", "Create");
 
-		return $this->response("Added Employee Successfully", false);
+		// Email
+		if (!empty($admin)) {
+			$html = view('emails.employee', compact('admin', 'Pass'))->render();
+
+			$mail = new PHPMailer(true);
+			try {
+				$mail->SMTPDebug = 0;
+				$mail->isSMTP();
+				$mail->Host = env('MAIL_HOST');
+				$mail->SMTPAuth = true;
+				$mail->Username = env('MAIL_USERNAME');
+				$mail->Password = env('MAIL_PASSWORD');
+				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
+				$mail->Port = env('MAIL_PORT');
+				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+				$mail->addAddress($admin->email);
+				$mail->isHTML(true);
+				$mail->Subject = "Create Admin";
+				$mail->Body = $html;
+				if (!$mail->send()) {
+					return $this->response($mail->ErrorInfo, true);
+				} else {
+					return $this->response("Added Employee Successfully", false);
+				}
+			} catch (Exception $e) {
+				return $this->response("Message could not be sent.", true);
+			}
+		}
 	}
 
 	public function EditEmployee(Request $request)
@@ -4927,7 +4952,7 @@ class AdminAPIController extends Controller
 			'qty' => 'required|integer|min:1',
 
 		], [
-			'product_id.required' => 'Please Enter Product  ID',
+			'product_id.required' => 'Please Enter Product ID',
 			'qty.required' => 'Please Enter Quantity',
 			'qty.min' => 'Quantity must be at least 1.',
 			'qty.integer' => 'Quantity must be a valid integer.'

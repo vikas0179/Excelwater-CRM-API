@@ -103,26 +103,22 @@
                 </table>
             </div>
 
-            <div style="font-size: 14px; margin-top: 16px; color: #6B7280">
-                <div style="display: flex; justify-content:space-between">
-                    <div>
-                        <p style="margin-bottom: 0px;">* <b><?= isset($InvoiceData->desc) ? $InvoiceData->desc : ''; ?></b> </p>
-                    </div>
-                    <div>
-                        <p style="margin-bottom: 0px;"><strong>SUBTOTAL:</strong> <?= '$' . $totalAmount ?></p>
-                        <p style="margin-top: 0px; margin-bottom: 0px;"><strong>HST (ON) @ 13%:</strong>
-                            @php $calculated = (13 / 100) * $totalAmount; @endphp
-                            <?= '$' . $calculated ?>
-                        </p>
-                        <p style="font-weight: bold; font-size: 18px; margin-top: 0px;">
-                            TOTAL: CAD <?= '$' . ($totalAmount + $calculated) ?>
-                        </p>
-                    </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="font-size: 14px; color: #6B7280; width:50%">
+                    <p style="margin-bottom: 0px;">
+                        <b><?= isset($InvoiceData->desc) ? $InvoiceData->desc : '' ?></b>
+                    </p>
                 </div>
-            </div>
-
-            <div style="font-size: 14px; text-align: right; margin-top: 16px; color: #6B7280;">
-
+                <div style="width:50%; text-align: right;">
+                    <p style="margin-bottom: 0px;"><strong>SUBTOTAL:</strong> <?= '$' . $totalAmount ?></p>
+                    <p style="margin-top: 0px; margin-bottom: 0px;"><strong>HST (ON) @ 13%:</strong>
+                        @php $calculated = (13 / 100) * $totalAmount; @endphp
+                        <?= '$' . $calculated ?>
+                    </p>
+                    <p style="font-weight: bold; font-size: 18px; margin-top: 0px;">
+                        TOTAL: CAD <?= '$' . ($totalAmount + $calculated) ?>
+                    </p>
+                </div>
             </div>
 
         </div>

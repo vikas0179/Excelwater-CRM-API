@@ -21,10 +21,6 @@
                     <strong>Supplier Name: </strong>
                     <span>{{ isset($OrderList->supplier_name) ? $OrderList->supplier_name : '' }}</span>
                 </p>
-                {{-- <p style="margin: 2px">
-                    <strong>Order ID </strong>
-                    <span>{{ isset($OrderList->order_id) ? $OrderList->order_id : '' }}</span>
-                </p> --}}
                 <p style="margin: 2px">
                     <strong>Order Number </strong>
                     <span>{{ isset($OrderList->order_number) ? $OrderList->order_number : '' }}</span>
@@ -36,7 +32,7 @@
                         <tr style="background-color: #E0F2FE; color: #0EA5E9;">
                             <th style="padding: 8px; text-align: left;">Item</th>
                             <th style="padding: 8px; text-align: left;">Description</th>
-                            <th style="padding: 8px; text-align: left;">Qty</th>
+                            <th style="padding: 8px; text-align: center;">Qty</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -45,7 +41,7 @@
                                 <tr>
                                     <td>{{ isset($order->item) ? $order->item : '' }}</td>
                                     <td>{{ isset($order->desc) ? $order->desc : '' }}</td>
-                                    <td>{{ isset($order->qty) ? $order->qty : '' }}</td>
+                                    <td style="text-align:center;">{{ isset($order->qty) ? $order->qty : '' }}</td>
                                 </tr>
                             @endforeach
                         @endif
