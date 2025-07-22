@@ -21,10 +21,10 @@
                     <strong>Supplier Name: </strong>
                     <span>{{ isset($OrderList->supplier_name) ? $OrderList->supplier_name : '' }}</span>
                 </p>
-                <p style="margin: 2px">
+                {{-- <p style="margin: 2px">
                     <strong>Order ID </strong>
                     <span>{{ isset($OrderList->order_id) ? $OrderList->order_id : '' }}</span>
-                </p>
+                </p> --}}
                 <p style="margin: 2px">
                     <strong>Order Number </strong>
                     <span>{{ isset($OrderList->order_number) ? $OrderList->order_number : '' }}</span>

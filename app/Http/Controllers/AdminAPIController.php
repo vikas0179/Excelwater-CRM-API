@@ -3616,7 +3616,7 @@ class AdminAPIController extends Controller
 				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 				$mail->addAddress($OrderList->supplier_email);
 				$mail->isHTML(true);
-				$mail->Subject = "Order";
+				$mail->Subject = "New order from Excel Water Systems";
 				$mail->Body = $html;
 				if (!$mail->send()) {
 					return $this->response($mail->ErrorInfo, true);
@@ -3773,7 +3773,7 @@ class AdminAPIController extends Controller
 				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 				$mail->addAddress($OrderList->supplier_email);
 				$mail->isHTML(true);
-				$mail->Subject = "Order";
+				$mail->Subject = "New order from Excel Water Systems";
 				$mail->Body = $html;
 				if (!$mail->send()) {
 					return $this->response($mail->ErrorInfo, true);
@@ -3985,6 +3985,7 @@ class AdminAPIController extends Controller
 
 		$this->helper->ActivityLog($id, "Add Invoice", date('Y-m-d'), json_encode($EditInvoiceData), $this->user->name, "Invoice", $EditInvoiceData, "Create");
 
+
 		if (!empty($id)) {
 			$InvoiceData = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')->where('invoice.id', $id)->select('invoice.*', 'users.name as customer_name', 'users.email as customer_email', 'users.bcc', 'users.cc')->first();
 			if (!empty($InvoiceData->customer_email) && $InvoiceData->invoice_no && $is_send_mail == 1) {
@@ -4005,6 +4006,8 @@ class AdminAPIController extends Controller
 
 				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
 				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
+				echo $html;
+				die;
 
 				$mail = new PHPMailer(true);
 				try {
@@ -4845,12 +4848,12 @@ class AdminAPIController extends Controller
 			'id' => 'required',
 			'name' => 'required',
 			'email' => 'required|email|unique:admin,email,' . $request->id,
-			'password' => 'required',
+			// 'password' => 'required',
 		], [
 			'id.required' => 'Please Enter ID',
 			'name.required' => 'Please Enter Name',
 			'email.required' => 'Please Enter Email ID',
-			'password.required' => 'Please Enter Password',
+			// 'password.required' => 'Please Enter Password',
 		]);
 
 		if ($validator->fails()) {
