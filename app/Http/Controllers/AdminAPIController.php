@@ -4634,6 +4634,7 @@ class AdminAPIController extends Controller
 		$SparePartCount = SpareParts::count();
 		$OrderCount = Order::count();
 		$InvoiceCount = Invoice::count();
+		$invoice_amount = Invoice::sum('total_amount');
 
 		$monthlyData = Invoice::select(DB::raw("DATE_FORMAT(invoice_date, '%m') as month"), DB::raw("SUM(total_amount) as total_amount"))
 			->whereYear('invoice_date', Carbon::now()->year)
@@ -4660,6 +4661,7 @@ class AdminAPIController extends Controller
 			'order_count' => $OrderCount,
 			'invoice_count' => $InvoiceCount,
 			'chart_data' => $TotalAmountArray,
+			'invoice_amount' => $invoice_amount,
 		);
 
 		return $this->response("", false, $countAry);
