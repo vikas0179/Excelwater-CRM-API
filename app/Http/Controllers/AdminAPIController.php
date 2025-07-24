@@ -3264,7 +3264,7 @@ class AdminAPIController extends Controller
 		$PMasterData->update($in);
 		$getdata = $PMasterData->getChanges();
 
-		$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Product Master", json_encode($getdata), "Update");
+		$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Product  ", json_encode($getdata), "Update");
 		return $this->response("Product Master Update Successfully.", false);
 	}
 
@@ -3282,7 +3282,7 @@ class AdminAPIController extends Controller
 
 		if (ProductMaster::find($request->id)) {
 			DB::table('product_master')->where('id', $request->id)->delete();
-			$this->helper->ActivityLog($request->id, "Delete Product Master", date('Y-m-d'), "", $this->user->name, "Master > Product Master", "", "Delete");
+			$this->helper->ActivityLog($request->id, "Delete Product Master", date('Y-m-d'), "", $this->user->name, "Master > Product  ", "", "Delete");
 			return $this->response("Product Delete Successfully", false);
 		} else {
 			return $this->response("Product Data Not Found.", true);
@@ -3339,7 +3339,11 @@ class AdminAPIController extends Controller
 						$sparePartsArr = json_decode($product->spare_parts, true);
 						foreach ($sparePartsArr as $part) {
 							if ($part['spare_parts_id'] == $sparePart->id) {
-								$totalSparePartQty += $part['qty'];
+								$productStock = ProductStock::where('product_id', $product->id)
+									->select(DB::raw("SUM(qty) as total_qty"))
+									->first();
+								$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+								$totalSparePartQty += ($part['qty']*$productQty);
 							}
 						}
 					}
@@ -3505,7 +3509,11 @@ class AdminAPIController extends Controller
 						$sparePartsArr = json_decode($product->spare_parts, true);
 						foreach ($sparePartsArr as $part) {
 							if ($part['spare_parts_id'] == $sparePart->id) {
-								$totalSparePartQty += $part['qty'];
+								$productStock = ProductStock::where('product_id', $product->id)
+									->select(DB::raw("SUM(qty) as total_qty"))
+									->first();
+								$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+								$totalSparePartQty += ($part['qty']*$productQty);
 							}
 						}
 					}
@@ -4764,6 +4772,7 @@ class AdminAPIController extends Controller
 				$sparePartsArr = json_decode($product->spare_parts, true);
 				foreach ($sparePartsArr as $part) {
 					$sparePartUsage[$part['spare_parts_id']] = ($sparePartUsage[$part['spare_parts_id']] ?? 0) + $part['qty'];
+					
 				}
 			}
 		}
@@ -4774,7 +4783,13 @@ class AdminAPIController extends Controller
 			$opening_stock = $sparePart->opening_stock ?? 0;
 			$total_opening_and_delivery_qty = $total_delivery_qty + $opening_stock;
 
-			$totalSparePartQty = $sparePartUsage[$sparePart->id] ?? 0;
+			// $totalSparePartQty
+			$part_qty = $sparePartUsage[$sparePart->id] ?? 0;
+			$productStock = ProductStock::where('product_id', $product->id)
+									->select(DB::raw("SUM(qty) as total_qty"))
+									->first();
+								$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+			$totalSparePartQty = ($part_qty*$productQty);
 			$sparePart->stock_qty = $stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
 
 			$min_alert_qty = $sparePart->min_alert_qty;
