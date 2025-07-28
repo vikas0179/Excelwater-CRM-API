@@ -286,4 +286,32 @@ class HomeController extends Controller
         );
         return $this->response("", false, $data);
     }
+
+    public function ScanIsExitQrCode(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'product_code' => 'required',
+        ], [
+            'product_code.required' => 'Please Enter Product Code',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->response($validator->errors()->first(), true);
+        }
+
+        $product_code = isset($request->product_code) ? $request->product_code : NULL;
+        if (!empty($product_code)) {
+            $getProductStockData = ProductStock::where('product_code', $product_code)->first();
+            if (empty($getProductStockData)) {
+                return $this->response("Invalid Product Code!", true);
+            } else {
+                $data = array(
+                    'is_scan' => $getProductStockData->status,
+                );
+                return $this->response("", false, $data);
+            }
+        } else {
+            return $this->response("Product Code Not Found!", true);
+        }
+    }
 }

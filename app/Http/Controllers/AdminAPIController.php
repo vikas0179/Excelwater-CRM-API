@@ -3147,9 +3147,9 @@ class AdminAPIController extends Controller
 			'price' => 'required',
 			'desc' => 'required',
 			'image' => 'required',
-			'spare_parts_id' => 'required',
-			'item' => 'required',
-			'qty' => 'required',
+			// 'spare_parts_id' => 'required',
+			// 'item' => 'required',
+			// 'qty' => 'required',
 		], [
 			'product_name.required' => 'Please Enter Product Name',
 			'product_code.required' => 'Please Enter Product Code',
@@ -3157,9 +3157,9 @@ class AdminAPIController extends Controller
 			'price.required' => 'Please Enter Price',
 			'desc.required' => 'Please Enter Description',
 			'image.required' => 'Please Select Image',
-			'spare_parts_id.required' => 'Please Select Raw Material Name',
-			'item.required' => 'Please Enter Item',
-			'qty.required' => 'Please Enter Quantity',
+			// 'spare_parts_id.required' => 'Please Select Raw Material Name',
+			// 'item.required' => 'Please Enter Item',
+			// 'qty.required' => 'Please Enter Quantity',
 		]);
 
 		if ($validator->fails()) {
@@ -3212,9 +3212,9 @@ class AdminAPIController extends Controller
 			'min_alert_qty' => 'required',
 			'price' => 'required',
 			'desc' => 'required',
-			'spare_parts_id' => 'required',
-			'item' => 'required',
-			'qty' => 'required',
+			// 'spare_parts_id' => 'required',
+			// 'item' => 'required',
+			// 'qty' => 'required',
 		], [
 			'id.required' => 'ID Is Required',
 			'product_name.required' => 'Please Enter Product Name',
@@ -3222,9 +3222,9 @@ class AdminAPIController extends Controller
 			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'price.required' => 'Please Enter Price',
 			'desc.required' => 'Please Enter Description',
-			'spare_parts_id.required' => 'Please Select Raw Material Name',
-			'item.required' => 'Please Enter Item',
-			'qty.required' => 'Please Enter Quantity',
+			// 'spare_parts_id.required' => 'Please Select Raw Material Name',
+			// 'item.required' => 'Please Enter Item',
+			// 'qty.required' => 'Please Enter Quantity',
 		]);
 
 		if ($validator->fails()) {
@@ -3343,7 +3343,7 @@ class AdminAPIController extends Controller
 									->select(DB::raw("SUM(qty) as total_qty"))
 									->first();
 								$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
-								$totalSparePartQty += ($part['qty']*$productQty);
+								$totalSparePartQty += ($part['qty'] * $productQty);
 							}
 						}
 					}
@@ -3513,7 +3513,7 @@ class AdminAPIController extends Controller
 									->select(DB::raw("SUM(qty) as total_qty"))
 									->first();
 								$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
-								$totalSparePartQty += ($part['qty']*$productQty);
+								$totalSparePartQty += ($part['qty'] * $productQty);
 							}
 						}
 					}
@@ -3763,11 +3763,11 @@ class AdminAPIController extends Controller
 			}
 		}
 
-		if (!empty($id)) {
+		if (!empty($request->id)) {
 			$OrderList = Order::Join('supplier', 'supplier.id', '=', 'order.supplier_id')->where('order.id', $request->id)->select('order.supplier_id', 'order.order_id', 'order.order_number', 'supplier.name as supplier_name', 'supplier.email as supplier_email')->first();
 			$OrderItemList = OrderItem::where('order_id', $request->id)->get();
 			$html = view('emails.order', compact('OrderItemList', 'OrderList'))->render();
-
+			$orderNumber = $OrderList->order_number;
 			$mail = new PHPMailer(true);
 			try {
 				$mail->SMTPDebug = 0;
@@ -3781,12 +3781,12 @@ class AdminAPIController extends Controller
 				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 				$mail->addAddress($OrderList->supplier_email);
 				$mail->isHTML(true);
-				$mail->Subject = "New order from Excel Water Systems";
+				$mail->Subject = "Update Order " . $orderNumber . " from Excel Water Systems";
 				$mail->Body = $html;
 				if (!$mail->send()) {
 					return $this->response($mail->ErrorInfo, true);
 				} else {
-					return $this->response("Raw Material Order Add Successfully.", false);
+					return $this->response("Update Order  Successfully.", false);
 				}
 			} catch (Exception $e) {
 				return $this->response("Message could not be sent.", true);
@@ -4125,6 +4125,7 @@ class AdminAPIController extends Controller
 		}
 
 		$is_send_mail = isset($request->is_send_mail) ? $request->is_send_mail : 0;
+		$deleted_prod = isset($request->deleted_prod) ? $request->deleted_prod : "";
 
 		$EditInvoiceData = Invoice::where('id', $request->id)->first();
 		$EditInvoiceData->customer_id = (!empty($request->customer_id)) ? $request->customer_id : 0;
@@ -4137,6 +4138,12 @@ class AdminAPIController extends Controller
 		$getdata = $EditInvoiceData->getChanges();
 
 		$this->helper->ActivityLog($request->id, "Edit Invoice", date('Y-m-d'), json_encode($EditInvoiceData), $this->user->name, "Invoice", $EditInvoiceData, "Update");
+		if (!empty($deleted_prod)) {
+			$deleted_prod = explode(',', $deleted_prod);
+			foreach ($deleted_prod as $del_prod) {
+				ProductStock::where('product_code', $del_prod)->update(['status' => 0]);
+			}
+		}
 
 		DB::table('invoice_item')->where('invoice_id', $request->id)->delete();
 		$this->helper->ActivityLog($request->id, "Delete Invoice Item", date('Y-m-d'), "", $this->user->name, "Invoice", $EditInvoiceData, "Delete");
@@ -4772,7 +4779,6 @@ class AdminAPIController extends Controller
 				$sparePartsArr = json_decode($product->spare_parts, true);
 				foreach ($sparePartsArr as $part) {
 					$sparePartUsage[$part['spare_parts_id']] = ($sparePartUsage[$part['spare_parts_id']] ?? 0) + $part['qty'];
-					
 				}
 			}
 		}
@@ -4786,10 +4792,10 @@ class AdminAPIController extends Controller
 			// $totalSparePartQty
 			$part_qty = $sparePartUsage[$sparePart->id] ?? 0;
 			$productStock = ProductStock::where('product_id', $product->id)
-									->select(DB::raw("SUM(qty) as total_qty"))
-									->first();
-								$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
-			$totalSparePartQty = ($part_qty*$productQty);
+				->select(DB::raw("SUM(qty) as total_qty"))
+				->first();
+			$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+			$totalSparePartQty = ($part_qty * $productQty);
 			$sparePart->stock_qty = $stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
 
 			$min_alert_qty = $sparePart->min_alert_qty;
@@ -4975,17 +4981,46 @@ class AdminAPIController extends Controller
 			'qty.integer' => 'Quantity must be a valid integer.'
 		]);
 
+
+		$product_id = $request->product_id;
+		$qty = isset($request->qty) ? $request->qty : 0;
+
+		$ProductMasterCheck = ProductMaster::where('id', $product_id)->select('spare_parts')->first();
+		$is_error = 0;
+		$material_name = "";
+		if (!empty($ProductMasterCheck->spare_parts)) {
+			$json_row_material = json_decode($ProductMasterCheck->spare_parts, true);
+			if (!empty($json_row_material)) {
+				foreach ($json_row_material as $material) {
+					$material_qty = isset($material['qty']) ? $material['qty'] : 0;
+					$CheckStock = ($material_qty * $qty);
+
+					$spare_partData = SpareParts::where('id', $material['spare_parts_id'])->select('opening_stock', 'part_name', 'min_alert_qty')->first();
+					$opening_stock_qty = isset($spare_partData->opening_stock) ? $spare_partData->opening_stock : 0;
+
+					if ($CheckStock >= $opening_stock_qty) {
+						$material_name .= isset($spare_partData->part_name) ?   " " . $spare_partData->part_name . " " : NULL;
+						$is_error = 1;
+					}
+				}
+			}
+		}
+
+		if ($is_error == 1) {
+			return $this->response("Insufficient  " . $material_name . " stock to fulfill the requested quantity.", true);
+		}
+
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		$qty = isset($request->qty) ? $request->qty : 0;
+
 		if (!empty($qty)) {
 			for ($i = 1; $i <= $qty; $i++) {
 				$productCode = $this->exit_product_stock_code();
 
 				$productstock = new ProductStock();
-				$productstock->product_id = $request->product_id;
+				$productstock->product_id = $product_id;
 				$productstock->product_code = $productCode;
 				$productstock->qty = 1;
 				$productstock->status = 0;

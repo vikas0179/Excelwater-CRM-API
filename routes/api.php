@@ -22,6 +22,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 	Route::post('get_invoice_detail_old', [HomeController::class, 'GetInvoiceDetailOld']);
 	Route::post('get_invoice_detail', [HomeController::class, 'GetInvoiceDetail']);
+	Route::post('scan_exit_qr_code', [HomeController::class, 'ScanIsExitQrCode']);
 
 	Route::get('draft_invoice', [HomeController::class, 'DraftInvoice']);
 	Route::post('save_invoice', [HomeController::class, 'SaveInvoice']);
