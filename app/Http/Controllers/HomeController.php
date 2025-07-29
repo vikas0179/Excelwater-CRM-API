@@ -119,6 +119,7 @@ class HomeController extends Controller
     {
         $ProductMasterList = Invoice::leftJoin('users', 'users.id', '=', 'invoice.customer_id')
             ->select('invoice.id', 'invoice.invoice_no', 'users.name as customer_name')
+            ->where('save_send', 0)
             ->orderBy("id", "DESC")
             ->get();
 
