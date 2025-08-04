@@ -240,36 +240,22 @@ class AdminAPIController extends Controller
 		}
 
 		$user = Admin::where('email', $request->email)->first();
-
 		$token = Str::random(64);
-
 		$has_token = DB::table('password_reset_tokens')->where("email", $request->email)->first();
-
 		if ($has_token) {
-			DB::table('password_reset_tokens')->where("email", $request->email)->update([
-				'token' => $token
-			]);
+			DB::table('password_reset_tokens')->where("email", $request->email)->update(['token' => $token]);
 		} else {
-			DB::table('password_reset_tokens')->insert([
-				'email' => $request->email,
-				'token' => $token
-			]);
+			DB::table('password_reset_tokens')->insert(['email' => $request->email, 'token' => $token]);
 		}
-
-		$username = $user->full_name;
-
-		/*return view('emails.admin-reset-password-link', compact('token',"username"));*/
 		Mail::send('emails.admin-reset-password-link', ['token' => $token, "username" => $user->full_name], function ($message) use ($request) {
 			$message->to($request->email);
 			$message->subject('Reset Password');
 		});
-
 		return $this->response("We have mailed your password reset link.");
 	}
 
 	public function verify_token(Request $request)
 	{
-
 		$validator = Validator::make($request->all(), [
 			'token' => 'required',
 		], [
@@ -4998,8 +4984,33 @@ class AdminAPIController extends Controller
 					$spare_partData = SpareParts::where('id', $material['spare_parts_id'])->select('opening_stock', 'part_name', 'min_alert_qty')->first();
 					$opening_stock_qty = isset($spare_partData->opening_stock) ? $spare_partData->opening_stock : 0;
 
-					if ($CheckStock >= $opening_stock_qty) {
-						$material_name .= isset($spare_partData->part_name) ?   " " . $spare_partData->part_name . " " : NULL;
+					// Check Raw Material Stock Qty
+					$SparePartsData = SpareParts::where("id", $material['spare_parts_id'])->first();
+					$orderItemData = OrderItem::where('item', $SparePartsData->part_name)->select(DB::raw("SUM(delivery_qty) as total_delivery_qty"),)->first();
+					$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
+					$opening_stock = (!empty($SparePartsData->opening_stock)) ? $SparePartsData->opening_stock : 0;
+					$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
+					$totalSparePartQty = 0;
+					$productMasters = ProductMaster::all();
+					foreach ($productMasters as $product) {
+						if (!empty($product->spare_parts)) {
+							$sparePartsArr = json_decode($product->spare_parts, true);
+							foreach ($sparePartsArr as $part) {
+								if ($part['spare_parts_id'] == $material['spare_parts_id']) {
+									$productStock = ProductStock::where('product_id', $product->id)
+										->select(DB::raw("SUM(qty) as total_qty"))
+										->first();
+									$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+									$totalSparePartQty += ($part['qty'] * $productQty);
+								}
+							}
+						}
+					}
+					$stock_qty = ($total_opening_and_delivery_qty - $totalSparePartQty);
+					// End Check Raw Material Stock Qty
+
+					if ($CheckStock > $stock_qty) {
+						$material_name .= isset($spare_partData->part_name) ?  " " . $spare_partData->part_name . " " : NULL;
 						$is_error = 1;
 					}
 				}
@@ -5014,11 +5025,9 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
-
 		if (!empty($qty)) {
 			for ($i = 1; $i <= $qty; $i++) {
 				$productCode = $this->exit_product_stock_code();
-
 				$productstock = new ProductStock();
 				$productstock->product_id = $product_id;
 				$productstock->product_code = $productCode;
