@@ -32,9 +32,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 	Route::post('login', [AdminAPIController::class, 'login']);
 	Route::post('/', [AdminAPIController::class, 'login']);
 
-	Route::post('forgot-password', [AdminAPIController::class, 'forgot_password']);
-	Route::post('verify-token', [AdminAPIController::class, 'verify_token']);
-	Route::post('reset-password', [AdminAPIController::class, 'reset_password']);
+	Route::post('forgot-password', [HomeController::class, 'forgot_password']);
+	Route::post('verify-token', [HomeController::class, 'verify_token']);
+	Route::post('reset-password', [HomeController::class, 'reset_password']);
 
 	Route::get('get-data', [AdminAPIController::class, 'get_data']);
 	Route::get('get-static-data', [AdminAPIController::class, 'get_static_data']);

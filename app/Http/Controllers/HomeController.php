@@ -315,4 +315,87 @@ class HomeController extends Controller
             return $this->response("Product Code Not Found!", true);
         }
     }
+
+    public function forgot_password(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:admin',
+        ], [
+            'email.required' => 'Please enter email',
+            'email.email' => 'Please enter valid email address',
+            'email.exists' => 'Entered email address is not found',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->response($validator->errors()->first(), true);
+        }
+
+        $user = Admin::where('email', $request->email)->first();
+        $token = Str::random(64);
+        $has_token = DB::table('password_reset_tokens')->where("email", $request->email)->first();
+        if ($has_token) {
+            DB::table('password_reset_tokens')->where("email", $request->email)->update(['token' => $token]);
+        } else {
+            DB::table('password_reset_tokens')->insert(['email' => $request->email, 'token' => $token]);
+        }
+        Mail::send('emails.admin-reset-password-link', ['token' => $token, "username" => $user->full_name], function ($message) use ($request) {
+            $message->to($request->email);
+            $message->subject('Reset Password');
+        });
+        return $this->response("We have mailed your password reset link.");
+    }
+
+    public function verify_token(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+        ], [
+            'token.required' => 'Please send required parameters',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->response($validator->errors()->first(), true);
+        }
+
+        $token = DB::table('password_reset_tokens')->where('token', $request->token)->first();
+
+        if ($token) {
+            return $this->response("Password reset link is valid", false);
+        } else {
+            return $this->response("Password reset link is expired or invalid, Please try again...", true);
+        }
+    }
+
+    public function reset_password(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+            'password' => 'required|min:8|regex:/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{6,}$/ ',
+            'confirm_password' => 'required|same:password',
+
+        ], [
+            'token.required' => 'Token is required',
+            'password.required' => 'Please enter password',
+            'password.min' => 'Please enter minimum 8 character in password',
+            'password.regex' => 'Your password must be more than 8 characters long, should contain at-least 1 Uppercase, 1 Lowercase, 1 Numeric and 1 special character.',
+            'confirm_password.required' => 'Please enter confirm password',
+            'confirm_password.same' => 'Entered new password and confirm new password not matched',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->response($validator->errors()->first(), true);
+        }
+
+        $user = DB::table('password_reset_tokens')->where('token', $request->token)->first();
+
+        if (!$user) {
+            return $this->response("Password reset link is expired.", true);
+        }
+
+        Admin::where('email', $user->email)->update(['password' => Hash::make($request->password)]);
+
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
+        return $this->response("Password Reset Successfully");
+    }
 }

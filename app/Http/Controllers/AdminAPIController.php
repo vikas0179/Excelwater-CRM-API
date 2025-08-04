@@ -122,7 +122,8 @@ class AdminAPIController extends Controller
 
 		$this->helper = new Helper();
 
-		$this->middleware('jwt.verify', ['except' => ['login', 'forgot_password', 'verify_token', 'reset_password', 'get_data', 'get_static_data', 'lead_save']]);
+		$this->middleware('jwt.verify', ['except' => ['login', 'get_data', 'get_static_data', 'lead_save']]);
+		// $this->middleware('jwt.verify', ['except' => ['login', 'forgot_password', 'verify_token', 'reset_password', 'get_data', 'get_static_data', 'lead_save']]);
 	}
 
 	public function get_data(Request $request)
@@ -224,7 +225,7 @@ class AdminAPIController extends Controller
 		return $this->response("You are logged out successfully.");
 	}
 
-	public function forgot_password(Request $request)
+	/*public function forgot_password(Request $request)
 	{
 
 		$validator = Validator::make($request->all(), [
@@ -307,7 +308,7 @@ class AdminAPIController extends Controller
 		DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
 		return $this->response("Password reset successfully");
-	}
+	}*/
 
 	public function get_profile()
 	{

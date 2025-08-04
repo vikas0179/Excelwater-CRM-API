@@ -256,3 +256,6 @@ ALTER TABLE `transaction` ADD `invoice_id` int NULL AFTER `customer_id`;
 -- 17-07-2025
 
 ALTER TABLE `product_master` CHANGE `min_alert_qty` `min_alert_qty` decimal(8,0) NULL AFTER `price`;
+
+-- 04-08-2025
+ALTER TABLE `invoice` CHANGE `invoice_no` `invoice_no` varchar(256) NULL AFTER `ship_to`;
