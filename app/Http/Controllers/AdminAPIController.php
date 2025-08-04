@@ -3152,12 +3152,7 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		if ($request->hasFile('image')) {
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/product_master/';
-			$file->move($path, $fileName);
-		}
+
 
 		$spare_parts_Arry = [];
 		if (!empty($request->item)) {
@@ -3176,9 +3171,15 @@ class AdminAPIController extends Controller
 		$pMaster->product_code = $request->product_code;
 		$pMaster->price = $request->price;
 		$pMaster->desc = $request->desc;
-		$pMaster->image = $request->image;
 		$pMaster->spare_parts = $json_item;
 		$pMaster->min_alert_qty = $request->min_alert_qty;
+		if ($request->hasFile('image')) {
+			$file = $request->file('image');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/product_master/';
+			$file->move($path, $fileName);
+			$pMaster->image = $fileName;
+		}
 		$pMaster->save();
 
 		if (!empty($pMaster)) {
