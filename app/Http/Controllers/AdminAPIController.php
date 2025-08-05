@@ -3598,7 +3598,8 @@ class AdminAPIController extends Controller
 			$OrderItemList = OrderItem::where('order_id', $id)->get();
 			$html = view('emails.order', compact('OrderItemList', 'OrderList'))->render();
 			// Mail
-			return $this->SendMail($OrderList->supplier_email, "New order from Excel Water Systems", $html);
+			$this->SendMail($OrderList->supplier_email, "New order from Excel Water Systems", $html);
+			return $this->response("Raw Material Order Add Successfully.", false);
 		} else {
 			return $this->response("Raw Material Order Error.", true);
 		}
@@ -3736,7 +3737,8 @@ class AdminAPIController extends Controller
 			$subject = "Update Order " . $OrderList->order_number . " from Excel Water Systems";
 
 			// Mail
-			return $this->SendMail($OrderList->supplier_email, $subject, $html);
+			$this->SendMail($OrderList->supplier_email, $subject, $html);
+			return $this->response("Update Order  Successfully.", false);
 		}
 	}
 
@@ -4754,7 +4756,8 @@ class AdminAPIController extends Controller
 		// Email
 		if (!empty($admin)) {
 			$html = view('emails.employee', compact('admin', 'Pass'))->render();
-			return $this->SendMail($admin->email, "New Admin user", $html);
+			$this->SendMail($admin->email, "New Admin user", $html);
+			return $this->response("Added Create Admin Successfully", false);
 		}
 	}
 
