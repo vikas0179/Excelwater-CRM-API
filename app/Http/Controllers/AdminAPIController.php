@@ -3579,7 +3579,6 @@ class AdminAPIController extends Controller
 		$OrderData->order_number = $GenerateORderNumber;
 		$OrderData->save();
 		$id = $OrderData->id;
-
 		$this->helper->ActivityLog($id, "Add Order", date('Y-m-d'), json_encode($OrderData), $this->user->name, "Order", "", "Create");
 
 		if (!empty($request->item)) {
@@ -3598,30 +3597,8 @@ class AdminAPIController extends Controller
 			$OrderList = Order::Join('supplier', 'supplier.id', '=', 'order.supplier_id')->where('order.id', $id)->select('order.supplier_id', 'order.order_id', 'order.order_number', 'supplier.name as supplier_name', 'supplier.email as supplier_email')->first();
 			$OrderItemList = OrderItem::where('order_id', $id)->get();
 			$html = view('emails.order', compact('OrderItemList', 'OrderList'))->render();
-
-			$mail = new PHPMailer(true);
-			try {
-				$mail->SMTPDebug = 0;
-				$mail->isSMTP();
-				$mail->Host = env('MAIL_HOST');
-				$mail->SMTPAuth = true;
-				$mail->Username = env('MAIL_USERNAME');
-				$mail->Password = env('MAIL_PASSWORD');
-				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
-				$mail->Port = env('MAIL_PORT');
-				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-				$mail->addAddress($OrderList->supplier_email);
-				$mail->isHTML(true);
-				$mail->Subject = "New order from Excel Water Systems";
-				$mail->Body = $html;
-				if (!$mail->send()) {
-					return $this->response($mail->ErrorInfo, true);
-				} else {
-					return $this->response("Raw Material Order Add Successfully.", false);
-				}
-			} catch (Exception $e) {
-				return $this->response("Message could not be sent.", true);
-			}
+			// Mail
+			return $this->SendMail($OrderList->supplier_email, "New order from Excel Water Systems", $html);
 		} else {
 			return $this->response("Raw Material Order Error.", true);
 		}
@@ -3754,31 +3731,12 @@ class AdminAPIController extends Controller
 		if (!empty($request->id)) {
 			$OrderList = Order::Join('supplier', 'supplier.id', '=', 'order.supplier_id')->where('order.id', $request->id)->select('order.supplier_id', 'order.order_id', 'order.order_number', 'supplier.name as supplier_name', 'supplier.email as supplier_email')->first();
 			$OrderItemList = OrderItem::where('order_id', $request->id)->get();
+
 			$html = view('emails.order', compact('OrderItemList', 'OrderList'))->render();
-			$orderNumber = $OrderList->order_number;
-			$mail = new PHPMailer(true);
-			try {
-				$mail->SMTPDebug = 0;
-				$mail->isSMTP();
-				$mail->Host = env('MAIL_HOST');
-				$mail->SMTPAuth = true;
-				$mail->Username = env('MAIL_USERNAME');
-				$mail->Password = env('MAIL_PASSWORD');
-				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
-				$mail->Port = env('MAIL_PORT');
-				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-				$mail->addAddress($OrderList->supplier_email);
-				$mail->isHTML(true);
-				$mail->Subject = "Update Order " . $orderNumber . " from Excel Water Systems";
-				$mail->Body = $html;
-				if (!$mail->send()) {
-					return $this->response($mail->ErrorInfo, true);
-				} else {
-					return $this->response("Update Order  Successfully.", false);
-				}
-			} catch (Exception $e) {
-				return $this->response("Message could not be sent.", true);
-			}
+			$subject = "Update Order " . $OrderList->order_number . " from Excel Water Systems";
+
+			// Mail
+			return $this->SendMail($OrderList->supplier_email, $subject, $html);
 		}
 	}
 
@@ -4002,38 +3960,11 @@ class AdminAPIController extends Controller
 				$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
 				$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
 
-				$mail = new PHPMailer(true);
-				try {
-					$mail->SMTPDebug = 0;
-					$mail->isSMTP();
-					$mail->Host = env('MAIL_HOST');
-					$mail->SMTPAuth = true;
-					$mail->Username = env('MAIL_USERNAME');
-					$mail->Password = env('MAIL_PASSWORD');
-					$mail->SMTPSecure = env('MAIL_ENCRYPTION');
-					$mail->Port = env('MAIL_PORT');
-					$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-					$mail->addAddress($InvoiceData->customer_email);
-					if (!empty($bccMails)) {
-						foreach ($bccMails as $bccmail) {
-							$mail->addBCC($bccmail);
-						}
-					}
-					if (!empty($ccMails)) {
-						foreach ($ccMails as $ccmail) {
-							$mail->addCC($ccmail);
-						}
-					}
-					$mail->isHTML(true);
-					$mail->Subject = "Invoice";
-					$mail->Body = $html;
-					if (!$mail->send()) {
-						return $this->response($mail->ErrorInfo, true);
-					} else {
-						$invoiceInsertAry = array('id' => $id, 'send_status' => $is_send_mail);
-						return $this->response("Email has been sent.", false, $invoiceInsertAry);
-					}
-				} catch (Exception $e) {
+				$response = $this->SendMail($InvoiceData->customer_email, "Invoice", $html, $bccMails, $ccMails, 1);
+				if ($response == 1) {
+					$invoiceInsertAry = array('id' => $id, 'send_status' => $is_send_mail);
+					return $this->response("Email has been sent.", false, $invoiceInsertAry);
+				} else {
 					return $this->response("Message could not be sent.", true);
 				}
 			}
@@ -4185,41 +4116,13 @@ class AdminAPIController extends Controller
 				->groupBy(DB::raw("product_stock.product_id"))
 				->get();
 			$InvoiceUrl = "https://crm.excelwater.ca/manage_invoice/invoice_detail/" . $InvoiceData->invoice_no;
-			// $QrCode = QrCode::size(80)->generate($InvoiceUrl);
 			$html = view('emails.invoice', compact('InvoiceData', 'InvoiceItemsData', 'InvoiceUrl'))->render();
 
-			$mail = new PHPMailer(true);
-			try {
-				$mail->SMTPDebug = 0;
-				$mail->isSMTP();
-				$mail->Host = env('MAIL_HOST');
-				$mail->SMTPAuth = true;
-				$mail->Username = env('MAIL_USERNAME');
-				$mail->Password = env('MAIL_PASSWORD');
-				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
-				$mail->Port = env('MAIL_PORT');
-				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-				$mail->addAddress($InvoiceData->customer_email);
-				if (!empty($bccMails)) {
-					foreach ($bccMails as $bccmail) {
-						$mail->addBCC($bccmail);
-					}
-				}
-				if (!empty($ccMails)) {
-					foreach ($ccMails as $ccmail) {
-						$mail->addCC($ccmail);
-					}
-				}
-				$mail->isHTML(true);
-				$mail->Subject = "Invoice";
-				$mail->Body = $html;
-				if (!$mail->send()) {
-					return $this->response($mail->ErrorInfo, true);
-				} else {
-					$invoiceInsertAry = array('id' => $request->id, 'send_status' => $is_send_mail);
-					return $this->response("Email has been sent.", false, $invoiceInsertAry);
-				}
-			} catch (Exception $e) {
+			$response = $this->SendMail($InvoiceData->customer_email, "Invoice", $html, $bccMails, $ccMails, 1);
+			if ($response == 1) {
+				$invoiceInsertAry = array('id' => $request->id, 'send_status' => $is_send_mail);
+				return $this->response("Email has been sent.", false, $invoiceInsertAry);
+			} else {
 				return $this->response("Message could not be sent.", true);
 			}
 		}
@@ -4851,30 +4754,7 @@ class AdminAPIController extends Controller
 		// Email
 		if (!empty($admin)) {
 			$html = view('emails.employee', compact('admin', 'Pass'))->render();
-
-			$mail = new PHPMailer(true);
-			try {
-				$mail->SMTPDebug = 0;
-				$mail->isSMTP();
-				$mail->Host = env('MAIL_HOST');
-				$mail->SMTPAuth = true;
-				$mail->Username = env('MAIL_USERNAME');
-				$mail->Password = env('MAIL_PASSWORD');
-				$mail->SMTPSecure = env('MAIL_ENCRYPTION');
-				$mail->Port = env('MAIL_PORT');
-				$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-				$mail->addAddress($admin->email);
-				$mail->isHTML(true);
-				$mail->Subject = "New Admin user";
-				$mail->Body = $html;
-				if (!$mail->send()) {
-					return $this->response($mail->ErrorInfo, true);
-				} else {
-					return $this->response("Added Create Admin Successfully", false);
-				}
-			} catch (Exception $e) {
-				return $this->response("Message could not be sent.", true);
-			}
+			return $this->SendMail($admin->email, "New Admin user", $html);
 		}
 	}
 
@@ -5059,6 +4939,62 @@ class AdminAPIController extends Controller
 			return $this->response("", false, $ProductStock);
 		} else {
 			return $this->response("Product Stock Not Found", true);
+		}
+	}
+
+	public function SendMail($to_email, $subject, $body, $bccMails = [], $ccMails = [], $is_return = 0)
+	{
+		$mail = new PHPMailer(true);
+		try {
+			$mail->SMTPDebug = 0;
+			$mail->isSMTP();
+			$mail->Host = env('MAIL_HOST');
+			$mail->SMTPAuth = true;
+			$mail->Username = env('MAIL_USERNAME');
+			$mail->Password = env('MAIL_PASSWORD');
+			$mail->SMTPSecure = env('MAIL_ENCRYPTION');
+			$mail->Port = env('MAIL_PORT');
+			$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+			$mail->addAddress($to_email);
+			$mail->SMTPOptions = array(
+				'ssl' => array(
+					'verify_peer' => false,
+					'verify_peer_name' => false,
+					'allow_self_signed' => true
+				)
+			);
+			if (!empty($bccMails)) {
+				foreach ($bccMails as $bccmail) {
+					$mail->addBCC($bccmail);
+				}
+			}
+			if (!empty($ccMails)) {
+				foreach ($ccMails as $ccmail) {
+					$mail->addCC($ccmail);
+				}
+			}
+			$mail->isHTML(true);
+			$mail->Subject = $subject;
+			$mail->Body = $body;
+			if (!$mail->send()) {
+				if ($is_return == 1) {
+					return 0;
+				} else {
+					return $this->response($mail->ErrorInfo, true);
+				}
+			} else {
+				if ($is_return == 1) {
+					return 1;
+				} else {
+					return $this->response("Mail Send Successfully!", false);
+				}
+			}
+		} catch (Exception $e) {
+			if ($is_return == 1) {
+				return 0;
+			} else {
+				return $this->response("Message could not be sent.", true);
+			}
 		}
 	}
 }
