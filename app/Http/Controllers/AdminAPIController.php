@@ -3817,8 +3817,19 @@ class AdminAPIController extends Controller
 		$invoices = Invoice::where('void_status', 0)->orderBy("id", "DESC")->paginate(100);
 		if (!empty($invoices)) {
 			foreach ($invoices as $invoice) {
+				$totalTransactionAmount = Transaction::where('invoice_id', $invoice->id)->select(DB::raw("SUM(amount) as transaction_total_amount"))->first();
+				$transaction_amount = !empty($totalTransactionAmount->transaction_total_amount) ? $totalTransactionAmount->transaction_total_amount : 0;
 
-				if ($invoice->transaction_type == 1) {
+				$total_amount = !empty($invoice->total_amount) ? $invoice->total_amount : 0;
+				$invoice->total_amount = $total_amount = $total_amount + ($total_amount * 13) / 100;
+
+				if (empty($transaction_amount)) {
+					$invoice->tax_with_remaining = $tax_with_remaining = !empty($invoice->total_amount) ? $invoice->total_amount : 0;
+				} else {
+					$invoice->tax_with_remaining = $tax_with_remaining = ($total_amount - $transaction_amount);
+				}
+
+				if ($invoice->transaction_type == 1 && empty($tax_with_remaining)) {
 					$payment_status = "Complete";
 				} elseif ($invoice->transaction_type == 0 && empty($invoice->remaining_amount)) {
 					$payment_status = "Pending";
@@ -4302,10 +4313,9 @@ class AdminAPIController extends Controller
 
 		$in = $request->all();
 		$transaction_amount = isset($in['amount']) && !empty($in['amount']) ? $in['amount'] : 0;
-		$invoiceData = Invoice::where('transaction_type', 0)->where('customer_id', $in['customer_id'])->where('id', $in['invoice_id'])->select('id', 'sub_total', 'total_amount', 'remaining_amount', 'transaction_type')->first();
+		$invoiceData = Invoice::where('customer_id', $in['customer_id'])->where('id', $in['invoice_id'])->select('id', 'sub_total', 'total_amount', 'remaining_amount', 'transaction_type')->first();
 		$subAmount = $transaction_amount;
 		if (!empty($invoiceData) && !empty($transaction_amount)) {
-
 			$response = Transaction::create([
 				'customer_id' => $in['customer_id'],
 				'invoice_id' => $in['invoice_id'],
@@ -4319,18 +4329,19 @@ class AdminAPIController extends Controller
 			]);
 			$this->helper->ActivityLog($response->id, "Add Transaction", date('Y-m-d'), json_encode($response), $this->user->name, "Transaction", "", "Create");
 
-			$remaining = !empty($invoiceData->remaining_amount) ? $invoiceData->remaining_amount : $invoiceData->total_amount;
-
-			if ($subAmount >= $remaining) {
-				$invoiceData->remaining_amount = 0;
-				$invoiceData->transaction_type = 1;
-				$subAmount -= $remaining;
-			} else {
-				$invoiceData->remaining_amount = $remaining - $subAmount;
-				$invoiceData->transaction_type = 0;
-				$subAmount = 0;
+			if ($invoiceData->transaction_type == 0) {
+				$remaining = !empty($invoiceData->remaining_amount) ? $invoiceData->remaining_amount : $invoiceData->total_amount;
+				if ($subAmount >= $remaining) {
+					$invoiceData->remaining_amount = 0;
+					$invoiceData->transaction_type = 1;
+					$subAmount -= $remaining;
+				} else {
+					$invoiceData->remaining_amount = $remaining - $subAmount;
+					$invoiceData->transaction_type = 0;
+					$subAmount = 0;
+				}
+				$invoiceData->save();
 			}
-			$invoiceData->save();
 			$this->helper->ActivityLog($request->id, "Invoice Settle Amount", date('Y-m-d'), $invoiceData, $this->user->name, "Transaction", "", "Create");
 			return $this->response("Invoices updated.", false);
 		} else {
