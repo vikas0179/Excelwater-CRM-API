@@ -4307,6 +4307,24 @@ class AdminAPIController extends Controller
 			'amount.required' => 'Please Enter Amount',
 		]);
 
+		$getinvoiceData = Invoice::where('customer_id', $request->customer_id)->where('id', $request->invoice_id)->select('id', 'sub_total', 'total_amount', 'remaining_amount', 'transaction_type')->first();
+		$totalTransactionAmount = Transaction::where('invoice_id', $request->invoice_id)->select(DB::raw("SUM(amount) as transaction_total_amount"))->first();
+		$transaction_amount = !empty($totalTransactionAmount->transaction_total_amount) ? $totalTransactionAmount->transaction_total_amount : 0;
+		$total_amount = !empty($getinvoiceData->total_amount) ? $getinvoiceData->total_amount : 0;
+		$total_amount = $total_amount + ($total_amount * 13) / 100;
+
+		if (empty($transaction_amount)) {
+			$tax_with_remaining = !empty($total_amount) ? $total_amount : 0;
+		} else {
+			$tax_with_remaining = ($total_amount - $transaction_amount);
+		}
+
+		$validator->after(function ($validator) use ($request, $tax_with_remaining) {
+			if ($request->amount > $tax_with_remaining) {
+				$validator->errors()->add('amount', 'Entered amount exceeds the remaining payable amount (' . round($tax_with_remaining, 2) . ').');
+			}
+		});
+
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
 		}
@@ -4314,6 +4332,7 @@ class AdminAPIController extends Controller
 		$in = $request->all();
 		$transaction_amount = isset($in['amount']) && !empty($in['amount']) ? $in['amount'] : 0;
 		$invoiceData = Invoice::where('customer_id', $in['customer_id'])->where('id', $in['invoice_id'])->select('id', 'sub_total', 'total_amount', 'remaining_amount', 'transaction_type')->first();
+
 		$subAmount = $transaction_amount;
 		if (!empty($invoiceData) && !empty($transaction_amount)) {
 			$response = Transaction::create([
