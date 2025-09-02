@@ -249,13 +249,20 @@ class HomeController extends Controller
         try {
             $mail->SMTPDebug = 0;
             $mail->isSMTP();
-            $mail->Host = "smtp.gmail.com";
+            $mail->Host = "smtp.excelwater.ca";
             $mail->SMTPAuth = true;
-            $mail->Username = "report.alert@aspiradiagnostics.com";
-            $mail->Password = "gtrg jwaf qzcb doup";
+            $mail->Username = "info@excelwater.ca";
+            $mail->Password = "fK!zzHTQ7";
             $mail->SMTPSecure = "tls";
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
             $mail->Port = 587;
-            $mail->setFrom("report.alert@aspiradiagnostics.com", "Excel Water System");
+            $mail->setFrom("info@excelwater.ca", "Excel Water System");
             $mail->addAddress("chauhandharmesh8957@gmail.com");
             $mail->isHTML(true);
             $mail->Subject = "Testing";

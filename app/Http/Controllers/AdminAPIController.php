@@ -4989,13 +4989,13 @@ class AdminAPIController extends Controller
 			$mail->Port = env('MAIL_PORT');
 			$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 			$mail->addAddress($to_email);
-			$mail->SMTPOptions = array(
-				'ssl' => array(
-					'verify_peer' => false,
-					'verify_peer_name' => false,
-					'allow_self_signed' => true
-				)
-			);
+			 $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
 			if (!empty($bccMails)) {
 				foreach ($bccMails as $bccmail) {
 					$mail->addBCC($bccmail);
