@@ -30,10 +30,12 @@
             <div style="display:flex; font-size: 14px; color: #6B7280;">
                 <div style="width: 50%">
                     <p style="font-weight: 600; margin-bottom: 0px;">BILL TO</p>
+                    <p style="margin-top:0px; margin-bottom:0px;"><?= isset($InvoiceData->customer_name) ? $InvoiceData->customer_name : '' ?></p>
                     <p style="margin-top: 0px;"><?= isset($InvoiceData->bill_to) ? $InvoiceData->bill_to : '' ?></p>
                 </div>
                 <div style="width: 50%">
                     <p style="font-weight: 600; margin-bottom: 0px;">SHIP TO</p>
+                    <p style="margin-top:0px; margin-bottom:0px;"><?= isset($InvoiceData->customer_name) ? $InvoiceData->customer_name : '' ?></p>
                     <p style="margin-top: 0px;"><?= isset($InvoiceData->ship_to) ? $InvoiceData->ship_to : '' ?></p>
                 </div>
             </div>
