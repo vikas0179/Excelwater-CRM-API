@@ -3824,9 +3824,9 @@ class AdminAPIController extends Controller
 				$invoice->total_amount = $total_amount = $total_amount + ($total_amount * 13) / 100;
 
 				if (empty($transaction_amount)) {
-					$invoice->tax_with_remaining = $tax_with_remaining = !empty($invoice->total_amount) ? $invoice->total_amount : 0;
+					$invoice->tax_with_remaining = $tax_with_remaining = !empty($invoice->total_amount) ? round($invoice->total_amount, 2) : 0;
 				} else {
-					$invoice->tax_with_remaining = $tax_with_remaining = ($total_amount - $transaction_amount);
+					$invoice->tax_with_remaining = $tax_with_remaining = (round($total_amount, 2) - round($transaction_amount, 2));
 				}
 
 				if ($invoice->transaction_type == 1 && empty($tax_with_remaining)) {
@@ -3841,7 +3841,7 @@ class AdminAPIController extends Controller
 				$invoice->customer_name = isset($userData->name) ? $userData->name : '';
 				$receiving_payment = Transaction::where('invoice_id', $invoice->id)->select(DB::raw('SUM(amount) as receivingpayment'))->first();
 				$ReceivingPayment = isset($receiving_payment->receivingpayment) && !empty($receiving_payment->receivingpayment) ? $receiving_payment->receivingpayment : NULL;
-				$invoice->receiving_payment = $ReceivingPayment;
+				$invoice->receiving_payment = round($ReceivingPayment, 2);
 				$invoice->invoice_detail = \App\Models\InvoiceItem::leftJoin('product_stock', function ($join) {
 					$join->on(DB::raw("FIND_IN_SET(product_stock.id, invoice_item.product_stock_id)"), '>', DB::raw('0'));
 				})
@@ -4989,13 +4989,13 @@ class AdminAPIController extends Controller
 			$mail->Port = env('MAIL_PORT');
 			$mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
 			$mail->addAddress($to_email);
-			 $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer'       => false,
-                    'verify_peer_name'  => false,
-                    'allow_self_signed' => true,
-                ],
-            ];
+			$mail->SMTPOptions = [
+				'ssl' => [
+					'verify_peer'       => false,
+					'verify_peer_name'  => false,
+					'allow_self_signed' => true,
+				],
+			];
 			if (!empty($bccMails)) {
 				foreach ($bccMails as $bccmail) {
 					$mail->addBCC($bccmail);
