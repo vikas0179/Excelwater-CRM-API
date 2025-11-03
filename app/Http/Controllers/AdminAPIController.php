@@ -3104,7 +3104,37 @@ class AdminAPIController extends Controller
 		if (!empty($ProductMasterList)) {
 			foreach ($ProductMasterList as $ProductMaster) {
 				$ProductMaster->image = asset('/storage/product_master/' . $ProductMaster->image);
-				$ProductMaster->spare_part = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
+				// $ProductMaster->spare_part = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
+				$spare_part_json = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
+				if (!empty($spare_part_json)) {
+					foreach ($spare_part_json as &$spare_part) {
+						$sparePart = SpareParts::where('id', $spare_part['spare_parts_id'])->select('id', 'part_name', 'price', 'stock_qty', 'opening_stock')->first();
+						$orderItemData = OrderItem::where('item', $spare_part['item'])->select(DB::raw("SUM(delivery_qty) as total_delivery_qty"))->first();
+						$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
+						$opening_stock = (!empty($sparePart->opening_stock)) ? $sparePart->opening_stock : 0;
+						$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
+
+						$totalSparePartQty = 0;
+						$productMasters = ProductMaster::all();
+						foreach ($productMasters as $product) {
+							if (!empty($product->spare_parts)) {
+								$sparePartsArr = json_decode($product->spare_parts, true);
+								foreach ($sparePartsArr as $part) {
+									if ($part['spare_parts_id'] == $sparePart->id) {
+										$productStock = ProductStock::where('product_id', $product->id)
+											->select(DB::raw("SUM(qty) as total_qty"))
+											->first();
+										$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+										$totalSparePartQty += ($part['qty'] * $productQty);
+									}
+								}
+							}
+						}
+						$spare_part['stock_qty'] = ($total_opening_and_delivery_qty - $totalSparePartQty);
+					}
+				}
+				$ProductMaster->spare_part = $spare_part_json;
+
 				unset($ProductMaster['spare_parts']);
 				$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
 				$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
