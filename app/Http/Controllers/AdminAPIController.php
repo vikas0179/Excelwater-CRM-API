@@ -4752,7 +4752,7 @@ class AdminAPIController extends Controller
 		if (!empty($AdminList) && count($AdminList) > 0) {
 			return $this->response("", false, $AdminList);
 		} else {
-			return $this->response("Create Admin Not Found!", true);
+			return $this->response("", true);
 		}
 	}
 
