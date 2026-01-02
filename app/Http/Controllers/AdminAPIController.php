@@ -51,8 +51,20 @@ use PHPMailer\PHPMailer\PHPMailer;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Helper;
 use App\Models\ActivityLog;
+use App\Models\Banners;
+use App\Models\Category;
+use App\Models\ProductAttributes;
+use App\Models\ProductResources;
+use App\Models\ProductReviews;
+use App\Models\Products;
+use App\Models\ProductsSelectedAttributes;
+use App\Models\ProductsVariations;
+use App\Models\ProductsVariationsItems;
+use App\Models\Settings;
+use App\Models\SubCategory;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
 
 class AdminAPIController extends Controller
 {
@@ -3093,6 +3105,188 @@ class AdminAPIController extends Controller
 
 
 	// Product Mastre
+	// public function product_master()
+	// {
+	// 	$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
+	// 		->select('product_master.*', DB::raw("SUM(invoice_item.amount) as final_price"))
+	// 		->groupBy('product_master.id')
+	// 		->orderBy("product_master.id", "DESC")
+	// 		->paginate(100);
+
+	// 	if (!empty($ProductMasterList)) {
+	// 		foreach ($ProductMasterList as $key => $ProductMaster) {
+	// 			// New
+
+	// 			$ProductsData = Products::leftJoin('categories', 'categories.id', '=', 'products.category')
+	// 				->leftJoin('sub_category', 'sub_category.id', '=', 'products.sub_category')
+	// 				->select('products.*', "categories.name as category_name", "sub_category.name as sub_category_name")
+	// 				->where('products.product_master_id', $ProductMaster->id)
+	// 				->first();
+
+	// 			$image_galley = [];
+	// 			if (isset($ProductsData->image_galley) && !empty($ProductsData->image_galley)) {
+	// 				$images = trim($ProductsData->image_galley, ", ");
+	// 				$imageArray = array_filter(explode(',', $images));
+	// 				foreach ($imageArray as $key => $value) {
+	// 					$image_galley[$key] = asset('/storage/product_master/product_gallery/' . $value);
+	// 				}
+	// 			}
+
+	// 			$resources = [];
+	// 			$ProductResources = ProductResources::where('product_id', $ProductsData->id)->get();
+	// 			if (!empty($ProductResources)) {
+	// 				foreach ($ProductResources as $ProductResource) {
+	// 					$resources[] = array(
+	// 						'id' => isset($ProductResource->id) ? $ProductResource->id : '',
+	// 						'name' => isset($ProductResource->name) ? $ProductResource->name : '',
+	// 						'filename' => isset($ProductResource->filename) ? $ProductResource->filename : '',
+	// 						'filename_url' => isset($ProductResource->filename) && !empty($ProductResource->filename) ? asset('/storage/product_master/resources/' . $ProductResource->filename) : '',
+	// 					);
+	// 				}
+	// 			}
+
+	// 			$product_atributes_items = [];
+	// 			if (!empty($ProductsData->has_product_atributes)) {
+	// 				$product_atributes = explode(',', $ProductsData->product_atributes);
+	// 				foreach ($product_atributes as $product_atribute) {
+	// 					$product_atribute_data = ProductsSelectedAttributes::leftJoin('product_attributes as attribute', 'attribute.id', '=', 'product_selected_attributes.attribute_id')
+	// 						->leftJoin('product_attributes as item', 'item.id', '=', 'product_selected_attributes.item_id')
+	// 						->select('product_selected_attributes.*', 'attribute.name as attribute_name', 'item.name as item_name')
+	// 						->where('product_selected_attributes.attribute_id', $product_atribute)
+	// 						->where('product_selected_attributes.product_id', $ProductsData->id)
+	// 						->first();
+	// 					$product_atributes_items[] = array(
+	// 						'id' => isset($product_atribute_data->id) ? $product_atribute_data->id : '',
+	// 						'attribute_id' => isset($product_atribute_data->attribute_id) ? $product_atribute_data->attribute_id : '',
+	// 						'attribute_name' => isset($product_atribute_data->attribute_name) ? $product_atribute_data->attribute_name : '',
+	// 						'item_id' => isset($product_atribute_data->item_id) ? $product_atribute_data->item_id : '',
+	// 						'item_name' => isset($product_atribute_data->item_name) ? $product_atribute_data->item_name : '',
+	// 						'product_id' => isset($product_atribute_data->product_id) ? $product_atribute_data->product_id : '',
+	// 					);
+	// 				}
+	// 			}
+
+	// 			$manage_price_array = [];
+	// 			$type = isset($ProductsData->type) ? $ProductsData->type : 0;
+	// 			if ($type == 1) {
+	// 				if (isset($ProductsData->attribute_ids) && !empty($ProductsData->attribute_ids)) {
+	// 					$attribute_ids = explode(',', $ProductsData->attribute_ids);
+	// 					if (count($attribute_ids) > 0) {
+	// 						foreach ($attribute_ids as $attribute_id) {
+	// 							$attribute_data = ProductsVariations::join('products_variations_items', 'products_variations_items.pv_id', '=', 'products_variations.id')
+	// 							->join('product_attributes as attribute', 'attribute.id', '=', 'products_variations_items.attribute_id')
+	// 							->join('product_attributes as item', 'item.id', '=', 'products_variations_items.item_id')
+	// 								->where('products_variations.id', $attribute_id)
+	// 								->where('products_variations.product_id', $ProductsData->id)
+	// 								->select('products_variations.*', 'attribute.name as attribute_name', 'item.name as item_name')
+	// 								->first();
+	// 							if (isset($attribute_data) && !empty($attribute_data)) {
+	// 								$manage_price_array = [
+	// 									'regular_price' => isset($attribute_data->regular_price) ? $attribute_data->regular_price : 0,
+	// 									'sale_price' => isset($attribute_data->sale_price) ? $attribute_data->sale_price : 0,
+	// 									'sale_price_usd' => isset($attribute_data->sale_price_usd) ? $attribute_data->sale_price_usd : 0,
+	// 									'regular_price_usd' => isset($attribute_data->regular_price_usd) ? $attribute_data->regular_price_usd : 0,
+	// 									'sale_price_inr' => isset($attribute_data->sale_price_inr) ? $attribute_data->sale_price_inr : 0,
+	// 									'regular_price_inr' => isset($attribute_data->regular_price_inr) ? $attribute_data->regular_price_inr : 0,
+	// 									'weight' => isset($attribute_data->weight) ? $attribute_data->weight : 0,
+	// 									'attribute_name' => isset($attribute_data->attribute_name) ? $attribute_data->attribute_name : '',
+	// 									'item_name' => isset($attribute_data->item_name) ? $attribute_data->item_name : '',
+	// 								];
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			} else {
+	// 				$manage_price_array = [
+	// 					'regular_price' => isset($ProductsData->regular_price) ? $ProductsData->regular_price : 0,
+	// 					'sale_price' => isset($ProductsData->sale_price) ? $ProductsData->sale_price : 0,
+	// 					'sale_price_usd' => isset($ProductsData->sale_price_usd) ? $ProductsData->sale_price_usd : 0,
+	// 					'regular_price_usd' => isset($ProductsData->regular_price_usd) ? $ProductsData->regular_price_usd : 0,
+	// 					'sale_price_inr' => isset($ProductsData->sale_price_inr) ? $ProductsData->sale_price_inr : 0,
+	// 					'regular_price_inr' => isset($ProductsData->regular_price_inr) ? $ProductsData->regular_price_inr : 0,
+	// 					'weight' => isset($ProductsData->weight) ? $ProductsData->weight : 0,
+	// 				];
+	// 			}
+
+	// 			$ProductsAry = array(
+	// 				'product_master_id' => isset($ProductMaster->id) ? $ProductMaster->id : '',
+	// 				'slug' => isset($ProductsData->slug) ? $ProductsData->slug : '',
+	// 				'sku' => isset($ProductsData->sku) ? $ProductsData->sku : '',
+	// 				'image_galley' => $image_galley,
+	// 				'category' => isset($ProductsData->category) ? $ProductsData->category : '',
+	// 				'sub_category' => isset($ProductsData->sub_category) ? $ProductsData->sub_category : '',
+	// 				'category_name' => isset($ProductsData->category_name) ? $ProductsData->category_name : '',
+	// 				'sub_category_name' => isset($ProductsData->sub_category_name) ? $ProductsData->sub_category_name : '',
+	// 				'status' => isset($ProductsData->status) ? $ProductsData->status : 0,
+	// 				'status_text' => isset($ProductsData->status) && $ProductsData->status == 1 ? 'Published' : 'Draft',
+	// 				'type' => isset($type) ? $type : 0,
+	// 				'type_text' => isset($type) && $type == 1 ? 'Variation' : 'Simple',
+	// 				'features' => isset($ProductsData->features) ? $ProductsData->features : '',
+	// 				'specifications' => isset($ProductsData->specifications) ? $ProductsData->specifications : '',
+	// 				'resources' => $resources,
+	// 				'meta_title' => isset($ProductsData->meta_title) ? $ProductsData->meta_title : '',
+	// 				'meta_description' => isset($ProductsData->meta_description) ? $ProductsData->meta_description : '',
+	// 				'meta_keywords' => isset($ProductsData->meta_keywords) ? $ProductsData->meta_keywords : '',
+	// 				'has_product_atributes' => isset($ProductsData->has_product_atributes) ? $ProductsData->has_product_atributes : 0,
+	// 				'has_product_atributes_items' => $product_atributes_items,
+	// 				'has_stock' => isset($ProductsData->has_stock) ? $ProductsData->has_stock : 0,
+	// 				'manage_price' => $manage_price_array,
+	// 			);
+	// 			$ProductMaster->products_data = $ProductsAry;
+	// 			$ProductMaster->image = asset('/storage/product_master/' . $ProductMaster->image);
+
+	// 			$spare_part_json = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
+	// 			if (!empty($spare_part_json)) {
+	// 				foreach ($spare_part_json as &$spare_part) {
+	// 					$sparePart = SpareParts::where('id', $spare_part['spare_parts_id'])->select('id', 'part_name', 'price', 'stock_qty', 'opening_stock')->first();
+	// 					$orderItemData = OrderItem::where('item', $spare_part['item'])->select(DB::raw("SUM(delivery_qty) as total_delivery_qty"))->first();
+	// 					$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
+	// 					$opening_stock = (!empty($sparePart->opening_stock)) ? $sparePart->opening_stock : 0;
+	// 					$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
+	// 					$totalSparePartQty = 0;
+	// 					$productMasters = ProductMaster::all();
+	// 					foreach ($productMasters as $product) {
+	// 						if (!empty($product->spare_parts)) {
+	// 							$sparePartsArr = json_decode($product->spare_parts, true);
+	// 							foreach ($sparePartsArr as $part) {
+	// 								if (!empty($sparePart->id) && $part['spare_parts_id'] == $sparePart->id) {
+	// 									$productStock = ProductStock::where('product_id', $product->id)
+	// 										->select(DB::raw("SUM(qty) as total_qty"))
+	// 										->first();
+	// 									$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+	// 									$totalSparePartQty += ($part['qty'] * $productQty);
+	// 								}
+	// 							}
+	// 						}
+	// 					}
+	// 					$spare_part['stock_qty'] = ($total_opening_and_delivery_qty - $totalSparePartQty);
+	// 				}
+	// 			}
+	// 			$ProductMaster->spare_part = $spare_part_json;
+
+	// 			unset($ProductMaster['spare_parts']);
+	// 			$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
+	// 			$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
+	// 			$ProductStockList = ProductStock::where('product_id', $ProductMaster->id)->orderBy("status", "asc")->get();
+	// 			if (!empty($ProductStockList)) {
+	// 				foreach ($ProductStockList as &$stock) {
+	// 					$stock->status = isset($stock->status) && $stock->status == 1 ? "Sell" : "Not Sell";
+	// 				}
+	// 			}
+	// 			$ProductMaster->product_stock_list = $ProductStockList;
+	// 		}
+	// 	}
+
+	// 	if (!empty($ProductMasterList)) {
+	// 		return $this->response("", false, $ProductMasterList);
+	// 	} else {
+	// 		return $this->response("Not Found Product List.", true);
+	// 	}
+	// }
+
+
+
+	// Product Master
 	public function product_master()
 	{
 		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
@@ -3102,9 +3296,182 @@ class AdminAPIController extends Controller
 			->paginate(100);
 
 		if (!empty($ProductMasterList)) {
-			foreach ($ProductMasterList as $ProductMaster) {
+			foreach ($ProductMasterList as $key => $ProductMaster) {
+				// New
+
+				$ProductsData = Products::leftJoin('categories', 'categories.id', '=', 'products.category')
+					->leftJoin('sub_category', 'sub_category.id', '=', 'products.sub_category')
+					->select('products.*', "categories.name as category_name", "sub_category.name as sub_category_name")
+					->where('products.product_master_id', $ProductMaster->id)
+					->first();
+
+				// Add null check here
+				if (empty($ProductsData)) {
+					// Set empty products_data if no product found
+					$ProductMaster->products_data = [];
+					$ProductMaster->image = asset('/storage/product_master/' . $ProductMaster->image);
+
+					// Continue with spare parts logic
+					$spare_part_json = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
+					if (!empty($spare_part_json)) {
+						foreach ($spare_part_json as &$spare_part) {
+							$sparePart = SpareParts::where('id', $spare_part['spare_parts_id'])->select('id', 'part_name', 'price', 'stock_qty', 'opening_stock')->first();
+							$orderItemData = OrderItem::where('item', $spare_part['item'])->select(DB::raw("SUM(delivery_qty) as total_delivery_qty"))->first();
+							$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
+							$opening_stock = (!empty($sparePart->opening_stock)) ? $sparePart->opening_stock : 0;
+							$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
+							$totalSparePartQty = 0;
+							$productMasters = ProductMaster::all();
+							foreach ($productMasters as $product) {
+								if (!empty($product->spare_parts)) {
+									$sparePartsArr = json_decode($product->spare_parts, true);
+									foreach ($sparePartsArr as $part) {
+										if (!empty($sparePart->id) && $part['spare_parts_id'] == $sparePart->id) {
+											$productStock = ProductStock::where('product_id', $product->id)
+												->select(DB::raw("SUM(qty) as total_qty"))
+												->first();
+											$productQty = (!empty($productStock->total_qty)) ? $productStock->total_qty : 0;
+											$totalSparePartQty += ($part['qty'] * $productQty);
+										}
+									}
+								}
+							}
+							$spare_part['stock_qty'] = ($total_opening_and_delivery_qty - $totalSparePartQty);
+						}
+					}
+					$ProductMaster->spare_part = $spare_part_json;
+					unset($ProductMaster['spare_parts']);
+
+					$stock_qty = ProductStock::where('status', 0)->where('product_id', $ProductMaster->id)->select(DB::raw("COUNT(id) as total_qty"))->first();
+					$ProductMaster->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
+					$ProductStockList = ProductStock::where('product_id', $ProductMaster->id)->orderBy("status", "asc")->get();
+					if (!empty($ProductStockList)) {
+						foreach ($ProductStockList as &$stock) {
+							$stock->status = isset($stock->status) && $stock->status == 1 ? "Sell" : "Not Sell";
+						}
+					}
+					$ProductMaster->product_stock_list = $ProductStockList;
+
+					continue; // Skip to next iteration
+				}
+
+				$image_galley = [];
+				if (isset($ProductsData->image_galley) && !empty($ProductsData->image_galley)) {
+					$images = trim($ProductsData->image_galley, ", ");
+					$imageArray = array_filter(explode(',', $images));
+					foreach ($imageArray as $key => $value) {
+						$image_galley[$key] = asset('/storage/product_master/product_gallery/' . $value);
+					}
+				}
+
+				$resources = [];
+				$ProductResources = ProductResources::where('product_id', $ProductsData->id)->get();
+				if (!empty($ProductResources)) {
+					foreach ($ProductResources as $ProductResource) {
+						$resources[] = array(
+							'id' => isset($ProductResource->id) ? $ProductResource->id : '',
+							'name' => isset($ProductResource->name) ? $ProductResource->name : '',
+							'filename' => isset($ProductResource->filename) ? $ProductResource->filename : '',
+							'filename_url' => isset($ProductResource->filename) && !empty($ProductResource->filename) ? asset('/storage/product_master/resources/' . $ProductResource->filename) : '',
+						);
+					}
+				}
+
+				$product_atributes_items = [];
+				if (!empty($ProductsData->has_product_atributes)) {
+					$product_atributes = explode(',', $ProductsData->product_atributes);
+					foreach ($product_atributes as $product_atribute) {
+						$product_atribute_data = ProductsSelectedAttributes::leftJoin('product_attributes as attribute', 'attribute.id', '=', 'product_selected_attributes.attribute_id')
+							->leftJoin('product_attributes as item', 'item.id', '=', 'product_selected_attributes.item_id')
+							->select('product_selected_attributes.*', 'attribute.name as attribute_name', 'item.name as item_name')
+							->where('product_selected_attributes.attribute_id', $product_atribute)
+							->where('product_selected_attributes.product_id', $ProductsData->id)
+							->first();
+						$product_atributes_items[] = array(
+							'id' => isset($product_atribute_data->id) ? $product_atribute_data->id : '',
+							'attribute_id' => isset($product_atribute_data->attribute_id) ? $product_atribute_data->attribute_id : '',
+							'attribute_name' => isset($product_atribute_data->attribute_name) ? $product_atribute_data->attribute_name : '',
+							'item_id' => isset($product_atribute_data->item_id) ? $product_atribute_data->item_id : '',
+							'item_name' => isset($product_atribute_data->item_name) ? $product_atribute_data->item_name : '',
+							'product_id' => isset($product_atribute_data->product_id) ? $product_atribute_data->product_id : '',
+						);
+					}
+				}
+
+				$manage_price_array = [];
+				$type = isset($ProductsData->type) ? $ProductsData->type : 0;
+				if ($type == 1) {
+					if (isset($ProductsData->attribute_ids) && !empty($ProductsData->attribute_ids)) {
+						$attribute_ids = explode(',', $ProductsData->attribute_ids);
+						if (count($attribute_ids) > 0) {
+							foreach ($attribute_ids as $attribute_id) {
+								$attribute_data = ProductsVariations::join('products_variations_items', 'products_variations_items.pv_id', '=', 'products_variations.id')
+									->join('product_attributes as attribute', 'attribute.id', '=', 'products_variations_items.attribute_id')
+									->join('product_attributes as item', 'item.id', '=', 'products_variations_items.item_id')
+									->where('products_variations_items.attribute_id', $attribute_id)
+									->where('products_variations.product_id', $ProductsData->id)
+									->select('products_variations.*', 'attribute.name as attribute_name', 'item.name as item_name', 'products_variations_items.attribute_id', 'products_variations_items.item_id')
+									->first();
+								if (isset($attribute_data) && !empty($attribute_data)) {
+									$manage_price_array[] = [
+										'id' => isset($attribute_data->id) ? $attribute_data->id : '',
+										'regular_price' => isset($attribute_data->regular_price) ? $attribute_data->regular_price : 0,
+										'sale_price' => isset($attribute_data->sale_price) ? $attribute_data->sale_price : 0,
+										'sale_price_usd' => isset($attribute_data->sale_price_usd) ? $attribute_data->sale_price_usd : 0,
+										'regular_price_usd' => isset($attribute_data->regular_price_usd) ? $attribute_data->regular_price_usd : 0,
+										'sale_price_inr' => isset($attribute_data->sale_price_inr) ? $attribute_data->sale_price_inr : 0,
+										'regular_price_inr' => isset($attribute_data->regular_price_inr) ? $attribute_data->regular_price_inr : 0,
+										'weight' => isset($attribute_data->weight) ? $attribute_data->weight : 0,
+										'attribute_name' => isset($attribute_data->attribute_name) ? $attribute_data->attribute_name : '',
+										'item_name' => isset($attribute_data->item_name) ? $attribute_data->item_name : '',
+										'attribute_id' => isset($attribute_data->attribute_id) ? $attribute_data->attribute_id : '',
+										'item_id' => isset($attribute_data->item_id) ? $attribute_data->item_id : '',
+									];
+								}
+							}
+						}
+					}
+				} else {
+					$manage_price_array = [
+						'regular_price' => isset($ProductsData->regular_price) ? $ProductsData->regular_price : 0,
+						'sale_price' => isset($ProductsData->sale_price) ? $ProductsData->sale_price : 0,
+						'sale_price_usd' => isset($ProductsData->sale_price_usd) ? $ProductsData->sale_price_usd : 0,
+						'regular_price_usd' => isset($ProductsData->regular_price_usd) ? $ProductsData->regular_price_usd : 0,
+						'sale_price_inr' => isset($ProductsData->sale_price_inr) ? $ProductsData->sale_price_inr : 0,
+						'regular_price_inr' => isset($ProductsData->regular_price_inr) ? $ProductsData->regular_price_inr : 0,
+						'weight' => isset($ProductsData->weight) ? $ProductsData->weight : 0,
+					];
+				}
+
+				$ProductsAry = array(
+					'product_master_id' => isset($ProductMaster->id) ? $ProductMaster->id : '',
+					'slug' => isset($ProductsData->slug) ? $ProductsData->slug : '',
+					'sku' => isset($ProductsData->sku) ? $ProductsData->sku : '',
+					'image_galley' => $image_galley,
+					'category' => isset($ProductsData->category) ? $ProductsData->category : '',
+					'sub_category' => isset($ProductsData->sub_category) ? $ProductsData->sub_category : '',
+					'category_name' => isset($ProductsData->category_name) ? $ProductsData->category_name : '',
+					'sub_category_name' => isset($ProductsData->sub_category_name) ? $ProductsData->sub_category_name : '',
+					'status' => isset($ProductsData->status) ? $ProductsData->status : 0,
+					'status_text' => isset($ProductsData->status) && $ProductsData->status == 1 ? 'Published' : 'Draft',
+					'type' => isset($type) ? $type : 0,
+					'type_text' => isset($type) && $type == 1 ? 'Variation' : 'Simple',
+					'features' => isset($ProductsData->features) ? $ProductsData->features : '',
+					'specifications' => isset($ProductsData->specifications) ? $ProductsData->specifications : '',
+					'attribute_ids' => isset($ProductsData->attribute_ids) ? $ProductsData->attribute_ids : '',
+					'resources' => $resources,
+					'meta_title' => isset($ProductsData->meta_title) ? $ProductsData->meta_title : '',
+					'meta_description' => isset($ProductsData->meta_description) ? $ProductsData->meta_description : '',
+					'meta_keywords' => isset($ProductsData->meta_keywords) ? $ProductsData->meta_keywords : '',
+					'product_atributes' => isset($ProductsData->product_atributes) ? $ProductsData->product_atributes : '',
+					'has_product_atributes' => isset($ProductsData->has_product_atributes) ? $ProductsData->has_product_atributes : 0,
+					'has_product_atributes_items' => $product_atributes_items,
+					'has_stock' => isset($ProductsData->has_stock) ? $ProductsData->has_stock : 0,
+					'manage_price' => $manage_price_array,
+				);
+				$ProductMaster->products_data = $ProductsAry;
 				$ProductMaster->image = asset('/storage/product_master/' . $ProductMaster->image);
-				// $ProductMaster->spare_part = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
+
 				$spare_part_json = (!empty($ProductMaster->spare_parts)) ? json_decode($ProductMaster->spare_parts, JSON_PRETTY_PRINT) : [];
 				if (!empty($spare_part_json)) {
 					foreach ($spare_part_json as &$spare_part) {
@@ -3113,14 +3480,13 @@ class AdminAPIController extends Controller
 						$total_delivery_qty = (!empty($orderItemData->total_delivery_qty)) ? $orderItemData->total_delivery_qty : 0;
 						$opening_stock = (!empty($sparePart->opening_stock)) ? $sparePart->opening_stock : 0;
 						$total_opening_and_delivery_qty = ($total_delivery_qty + $opening_stock);
-
 						$totalSparePartQty = 0;
 						$productMasters = ProductMaster::all();
 						foreach ($productMasters as $product) {
 							if (!empty($product->spare_parts)) {
 								$sparePartsArr = json_decode($product->spare_parts, true);
 								foreach ($sparePartsArr as $part) {
-									if ($part['spare_parts_id'] == $sparePart->id) {
+									if (!empty($sparePart->id) && $part['spare_parts_id'] == $sparePart->id) {
 										$productStock = ProductStock::where('product_id', $product->id)
 											->select(DB::raw("SUM(qty) as total_qty"))
 											->first();
@@ -3160,30 +3526,42 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'product_name' => 'required',
 			'product_code' => 'required',
-			'min_alert_qty' => 'required',
 			'price' => 'required',
+			'min_alert_qty' => 'required',
 			'desc' => 'required',
 			'image' => 'required',
-			// 'spare_parts_id' => 'required',
-			// 'item' => 'required',
-			// 'qty' => 'required',
+			// New
+			'slug' => 'required|unique:products,slug',
+			'category_id' => 'required',
+			'type' => 'required',
 		], [
 			'product_name.required' => 'Please Enter Product Name',
 			'product_code.required' => 'Please Enter Product Code',
-			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'price.required' => 'Please Enter Price',
+			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'desc.required' => 'Please Enter Description',
-			'image.required' => 'Please Select Image',
-			// 'spare_parts_id.required' => 'Please Select Raw Material Name',
-			// 'item.required' => 'Please Enter Item',
-			// 'qty.required' => 'Please Enter Quantity',
+			'image.required' => 'Please Select Avatar Image',
+			// New
+			'slug.required' => 'Please Enter Slug',
+			'slug.unique' => 'Slug Already Exist',
+			'category_id.required' => 'Please Select Category',
+			'type.required' => 'Please Select Type',
 		]);
+
+		$ProductType = $request->type;
+
+		if ($ProductType == 0) {
+			$validator->addRules(['regular_price' => 'required']);
+		}
+
+		if ($ProductType == 1) {
+			$validator->addRules(['attribute_ids' => 'required']);
+		}
+
 
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
 		}
-
-
 
 		$spare_parts_Arry = [];
 		if (!empty($request->item)) {
@@ -3196,7 +3574,6 @@ class AdminAPIController extends Controller
 			}
 		}
 		$json_item = json_encode($spare_parts_Arry);
-
 		$pMaster = new ProductMaster();
 		$pMaster->product_name = $request->product_name;
 		$pMaster->product_code = $request->product_code;
@@ -3213,6 +3590,99 @@ class AdminAPIController extends Controller
 		}
 		$pMaster->save();
 
+		$ProductImg = null;
+		if ($request->has('product_image') && count($request->product_image) > 0) {
+			foreach ($request->product_image as $key => $value) {
+				$fileName = "product-" . uniqid() . '.' . $value->getClientOriginalExtension();
+				$path = public_path() . '/storage/product_master/product_gallery/';
+				$value->move($path, $fileName);
+				$ProductImg .= $fileName . ',';
+			}
+		}
+
+		$ProductDataSet = new Products();
+		$ProductDataSet->product_master_id = $pMaster->id;
+		$ProductDataSet->parent_id = 0;
+		$ProductDataSet->title = null;
+		$ProductDataSet->slug = isset($request->slug) ? $request->slug : '';
+		$ProductDataSet->description = null;
+		$ProductDataSet->sku = isset($request->sku) ? $request->sku : null;
+		$ProductDataSet->image = null;
+		$ProductDataSet->image_galley = $ProductImg;
+		$ProductDataSet->category = isset($request->category_id) ? $request->category_id : null;
+		$ProductDataSet->sub_category = isset($request->sub_category_id) ? $request->sub_category_id : null;
+		$ProductDataSet->status = isset($request->status) ? $request->status : 0;
+		$ProductDataSet->type = $ProductType;
+		$ProductDataSet->features = isset($request->features) ? $request->features : null;
+		$ProductDataSet->specifications = isset($request->specifications) ? $request->specifications : null;
+		if ($ProductType == 0) {
+			$ProductDataSet->regular_price = isset($request->regular_price) ? $request->regular_price : 0;
+			$ProductDataSet->sale_price = isset($request->sale_price) ? $request->sale_price : 0;
+			$ProductDataSet->weight = isset($request->weight) ? $request->weight : 0;
+			$ProductDataSet->regular_price_usd = isset($request->regular_price_usd) ? $request->regular_price_usd : 0;
+			$ProductDataSet->sale_price_usd = isset($request->sale_price_usd) ? $request->sale_price_usd : 0;
+		} else {
+			$ProductDataSet->regular_price = 0;
+			$ProductDataSet->sale_price = 0;
+			$ProductDataSet->weight = 0;
+			$ProductDataSet->attribute_ids = isset($request->attribute_ids) ? implode(',', $request->attribute_ids) : null;
+		}
+		$ProductDataSet->meta_title = isset($request->meta_title) ? $request->meta_title : null;
+		$ProductDataSet->meta_description = isset($request->meta_description) ? $request->meta_description : null;
+		$ProductDataSet->meta_keywords = isset($request->meta_keywords) ? $request->meta_keywords : null;
+		$ProductDataSet->save();
+
+		if (isset($request['variation_regular_price']) && count($request['variation_regular_price']) > 0) {
+			foreach ($request['variation_regular_price'] as $i => $val) {
+				$data = [];
+				$data['product_id'] = $ProductDataSet->id;
+				$data['regular_price'] = $request['variation_regular_price'][$i] ? $request['variation_regular_price'][$i] : 0;
+				$data['sale_price'] = $request['variation_sale_price'][$i] ? $request['variation_sale_price'][$i] : 0;
+				$data['regular_price_usd'] = $request['variation_regular_price_usd'][$i] ? $request['variation_regular_price_usd'][$i] : 0;
+				$data['sale_price_usd'] = $request['variation_sale_price_usd'][$i] ? $request['variation_sale_price_usd'][$i] : 0;
+				$data['weight'] = $request['variation_weight'][$i] ? $request['variation_weight'][$i] : 0;
+				$variations = ProductsVariations::create($data);
+				if (isset($request['attribute_item'][$i])) {
+					$parent_attr = ProductAttributes::select('parent_id')->where('id', $request['attribute_item'][$i])->first();
+					ProductsVariationsItems::create([
+						'product_id' => $ProductDataSet->id,
+						'attribute_id' => $parent_attr ? $parent_attr->parent_id : -1,
+						'item_id' => $request['attribute_item'][$i],
+						'pv_id' => $variations->id,
+					]);
+				}
+			}
+		}
+
+		if ($request->has('has_product_attribute') && $request->has('product_attribute')) {
+			foreach ($request->product_attribute as $index => $attribute_id) {
+				$item_id = $request['product_attribute_item'][$index] ?? [];
+				ProductsSelectedAttributes::create([
+					'product_id' => $ProductDataSet->id,
+					'attribute_id' => $attribute_id,
+					'item_id' => $item_id,
+				]);
+			}
+			Products::where('id', $ProductDataSet->id)->update([
+				'product_atributes' => implode(',', $request->product_attribute),
+				'has_product_atributes' => 1,
+			]);
+		}
+
+		if ($request->has('resource_name')) {
+			foreach ($request->resource_name as $index => $rname) {
+				$file = $request->resource_file[$index];
+				$fileName = "product-" . uniqid() . '.' . $file->getClientOriginalExtension();
+				$path = public_path() . '/storage/product_master/resources/';
+				$file->move($path, $fileName);
+				ProductResources::create([
+					'product_id' => $ProductDataSet->id,
+					'name' => $rname,
+					'filename' => $fileName,
+				]);
+			}
+		}
+
 		if (!empty($pMaster)) {
 			$this->helper->ActivityLog($pMaster->id, "Add Product Master", date('Y-m-d'), json_encode($pMaster), $this->user->name, "Master > Product Master", "", "Create");
 			return $this->response("Product Add Successfully.", false);
@@ -3221,29 +3691,283 @@ class AdminAPIController extends Controller
 		}
 	}
 
+
 	public function edit_product_master(Request $request)
+	{
+		$PMasterData = ProductMaster::where('id', $request->id)->first();
+		if (!$PMasterData) {
+			return $this->response("Product Master Not Found.", true);
+		}
+
+		$ProductDataSet = Products::where('product_master_id', $PMasterData->id)->first();
+		$productId = $ProductDataSet ? $ProductDataSet->id : null;
+
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'product_name' => 'required',
+			'product_code' => 'required',
+			'price' => 'required',
+			'min_alert_qty' => 'required',
+			'desc' => 'required',
+			'slug' => 'required|unique:products,slug,' . $productId,
+			'category_id' => 'required',
+			'type' => 'required|in:0,1',
+		], [
+			'id.required' => 'ID Is Required',
+			'product_name.required' => 'Please Enter Product Name',
+			'product_code.required' => 'Please Enter Product Code',
+			'price.required' => 'Please Enter Price',
+			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
+			'desc.required' => 'Please Enter Description',
+			'slug.required' => 'Please Enter Slug',
+			'slug.unique' => 'Slug Already Exist',
+			'category_id.required' => 'Please Select Category',
+			'type.required' => 'Please Select Type',
+			'type.in' => 'Invalid Product Type',
+		]);
+
+		$ProductType = $request->type;
+
+		if ($ProductType == 0) {
+			$validator->after(function ($validator) use ($request) {
+				if (!$request->has('regular_price') || empty($request->regular_price)) {
+					$validator->errors()->add('regular_price', 'Regular Price is required for Simple products');
+				}
+			});
+		}
+		if ($ProductType == 1) {
+			$validator->after(function ($validator) use ($request) {
+				if (!$request->has('attribute_ids') || empty($request->attribute_ids)) {
+					$validator->errors()->add('attribute_ids', 'Attribute IDs are required for Variation products');
+				}
+			});
+		}
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		try {
+			if ($request->hasFile('image')) {
+				$file = $request->file('image');
+				$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+				$path = public_path() . '/storage/product_master/';
+				if (!file_exists($path)) {
+					mkdir($path, 0777, true);
+				}
+				$file->move($path, $fileName);
+				if ($PMasterData->image && file_exists($path . $PMasterData->image)) {
+					@unlink($path . $PMasterData->image);
+				}
+				DB::table('product_master')->where("id", $request->id)->update([
+					'image' => $fileName,
+				]);
+			}
+			$spare_parts_Arry = [];
+			if (!empty($request->item)) {
+				foreach ($request->item as $key => $item) {
+					$spare_parts_Arry[] = array(
+						'spare_parts_id' => $request->spare_parts_id[$key] ?? null,
+						'item' => $item,
+						'qty' => isset($request->qty[$key]) ? $request->qty[$key] : 0,
+					);
+				}
+			}
+			$json_item = json_encode($spare_parts_Arry);
+			$in['product_name'] = $request->product_name;
+			$in['product_code'] = $request->product_code;
+			$in['price'] = $request->price;
+			$in['desc'] = $request->desc;
+			$in['spare_parts'] = $json_item;
+			$in['min_alert_qty'] = $request->min_alert_qty;
+			$PMasterData->update($in);
+
+			if (!empty($ProductDataSet)) {
+				if ($request->has('product_image') && count($request->product_image) > 0) {
+					$ProductImg = "";
+					$galleryPath = public_path() . '/storage/product_master/product_gallery/';
+					if (!file_exists($galleryPath)) {
+						mkdir($galleryPath, 0777, true);
+					}
+					foreach ($request->product_image as $key => $value) {
+						$fileName = "product-" . uniqid() . '.' . $value->getClientOriginalExtension();
+						$value->move($galleryPath, $fileName);
+						$ProductImg .= $fileName . ',';
+					}
+					if (!empty($ProductDataSet->image_galley)) {
+						$ProductImg .= $ProductDataSet->image_galley;
+					}
+					$ProductDataSet->update(['image_galley' => $ProductImg]);
+				}
+
+				$ProductDataSet->product_master_id = $PMasterData->id;
+				$ProductDataSet->slug = isset($request->slug) ? $request->slug : '';
+				$ProductDataSet->sku = isset($request->sku) ? $request->sku : null;
+				$ProductDataSet->category = isset($request->category_id) ? $request->category_id : null;
+				$ProductDataSet->sub_category = isset($request->sub_category_id) ? $request->sub_category_id : null;
+				$ProductDataSet->status = isset($request->status) ? $request->status : 0;
+				$ProductDataSet->type = $ProductType;
+				$ProductDataSet->features = isset($request->features) ? $request->features : null;
+				$ProductDataSet->specifications = isset($request->specifications) ? $request->specifications : null;
+				if ($ProductType == 0) {
+					$ProductDataSet->regular_price = isset($request->regular_price) ? $request->regular_price : 0;
+					$ProductDataSet->sale_price = isset($request->sale_price) ? $request->sale_price : 0;
+					$ProductDataSet->weight = isset($request->weight) ? $request->weight : 0;
+					$ProductDataSet->regular_price_usd = isset($request->regular_price_usd) ? $request->regular_price_usd : 0;
+					$ProductDataSet->sale_price_usd = isset($request->sale_price_usd) ? $request->sale_price_usd : 0;
+					$ProductDataSet->regular_price_inr = isset($request->regular_price_inr) ? $request->regular_price_inr : 0;
+					$ProductDataSet->sale_price_inr = isset($request->sale_price_inr) ? $request->sale_price_inr : 0;
+					$ProductDataSet->attribute_ids = null;
+				} else {
+					$ProductDataSet->regular_price = 0;
+					$ProductDataSet->sale_price = 0;
+					$ProductDataSet->weight = 0;
+					$ProductDataSet->regular_price_usd = 0;
+					$ProductDataSet->sale_price_usd = 0;
+					$ProductDataSet->regular_price_inr = 0;
+					$ProductDataSet->sale_price_inr = 0;
+					$ProductDataSet->attribute_ids = isset($request->attribute_ids) ? implode(',', $request->attribute_ids) : null;
+				}
+				$ProductDataSet->meta_title = isset($request->meta_title) ? $request->meta_title : null;
+				$ProductDataSet->meta_description = isset($request->meta_description) ? $request->meta_description : null;
+				$ProductDataSet->meta_keywords = isset($request->meta_keywords) ? $request->meta_keywords : null;
+				$ProductDataSet->save();
+
+				if (isset($request['variation_regular_price']) && count($request['variation_regular_price']) > 0) {
+					ProductsVariations::where('product_id', $ProductDataSet->id)->delete();
+					ProductsVariationsItems::where('product_id', $ProductDataSet->id)->delete();
+					foreach ($request['variation_regular_price'] as $i => $val) {
+						$data = [];
+						$data['product_id'] = $ProductDataSet->id;
+						$data['regular_price'] = $request['variation_regular_price'][$i] ?? 0;
+						$data['sale_price'] = $request['variation_sale_price'][$i] ?? 0;
+						$data['regular_price_usd'] = $request['variation_regular_price_usd'][$i] ?? 0;
+						$data['sale_price_usd'] = $request['variation_sale_price_usd'][$i] ?? 0;
+						$data['regular_price_inr'] = $request['variation_regular_price_inr'][$i] ?? 0;
+						$data['sale_price_inr'] = $request['variation_sale_price_inr'][$i] ?? 0;
+						$data['weight'] = $request['variation_weight'][$i] ?? 0;
+						$variations = ProductsVariations::create($data);
+						if (isset($request['attribute_item'][$i])) {
+							$parent_attr = ProductAttributes::select('parent_id')->where('id', $request['attribute_item'][$i])->first();
+							ProductsVariationsItems::create([
+								'product_id' => $ProductDataSet->id,
+								'attribute_id' => $parent_attr ? $parent_attr->parent_id : null,
+								'item_id' => $request['attribute_item'][$i],
+								'pv_id' => $variations->id,
+							]);
+						}
+					}
+				}
+
+				if ($request->has('has_product_attribute') && $request->has('product_attribute')) {
+					ProductsSelectedAttributes::where('product_id', $ProductDataSet->id)->delete();
+					foreach ($request->product_attribute as $index => $attribute_id) {
+						$item_id = $request['product_attribute_item'][$index] ?? null;
+						ProductsSelectedAttributes::create([
+							'product_id' => $ProductDataSet->id,
+							'attribute_id' => $attribute_id,
+							'item_id' => $item_id,
+						]);
+					}
+					Products::where('id', $ProductDataSet->id)->update([
+						'product_atributes' => implode(',', $request->product_attribute),
+						'has_product_atributes' => 1,
+					]);
+				} else {
+					Products::where('id', $ProductDataSet->id)->update(['product_atributes' => null, 'has_product_atributes' => 0]);
+				}
+
+				if ($request->has('resource_name') && $request->has('resource_file')) {
+					ProductResources::where('product_id', $ProductDataSet->id)->delete();
+					$resourcePath = public_path() . '/storage/product_master/resources/';
+					if (!file_exists($resourcePath)) {
+						mkdir($resourcePath, 0777, true);
+					}
+					foreach ($request->resource_name as $index => $rname) {
+						$CreateProductResource = new ProductResources();
+						if (isset($request->resource_file[$index]) && $request->resource_file[$index]->isValid()) {
+							$file = $request->resource_file[$index];
+							$fileName = "product-" . uniqid() . '.' . $file->getClientOriginalExtension();
+							$file->move($resourcePath, $fileName);
+							$CreateProductResource->filename = $fileName;
+						}
+						$CreateProductResource->product_id = $ProductDataSet->id;
+						$CreateProductResource->name = $rname;
+						$CreateProductResource->save();
+					}
+				}
+			} else {
+				$ProductDataSet = new Products();
+				$ProductDataSet->product_master_id = $PMasterData->id;
+				$ProductDataSet->slug = $request->slug;
+				$ProductDataSet->sku = $request->sku ?? null;
+				$ProductDataSet->category = $request->category_id ?? null;
+				$ProductDataSet->sub_category = $request->sub_category_id ?? null;
+				$ProductDataSet->status = $request->status ?? 0;
+				$ProductDataSet->type = $ProductType;
+				$ProductDataSet->features = $request->features ?? null;
+				$ProductDataSet->specifications = $request->specifications ?? null;
+				if ($ProductType == 0) {
+					$ProductDataSet->regular_price = $request->regular_price ?? 0;
+					$ProductDataSet->sale_price = $request->sale_price ?? 0;
+					$ProductDataSet->weight = $request->weight ?? 0;
+					$ProductDataSet->regular_price_usd = $request->regular_price_usd ?? 0;
+					$ProductDataSet->sale_price_usd = $request->sale_price_usd ?? 0;
+					$ProductDataSet->regular_price_inr = $request->regular_price_inr ?? 0;
+					$ProductDataSet->sale_price_inr = $request->sale_price_inr ?? 0;
+				} else {
+					$ProductDataSet->attribute_ids = isset($request->attribute_ids) ? implode(',', $request->attribute_ids) : null;
+				}
+				$ProductDataSet->meta_title = $request->meta_title ?? null;
+				$ProductDataSet->meta_description = $request->meta_description ?? null;
+				$ProductDataSet->meta_keywords = $request->meta_keywords ?? null;
+				$ProductDataSet->save();
+			}
+
+			$getdata = $PMasterData->getChanges();
+			$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->except(['image', 'product_image', 'resource_file'])), $this->user->name, "Master > Product", json_encode($getdata), "Update");
+			return $this->response("Product Master Updated Successfully.", false);
+		} catch (\Exception $e) {
+			\Log::error('Product Master Update Error: ' . $e->getMessage());
+			return $this->response("Error updating product: " . $e->getMessage(), true);
+		}
+	}
+
+
+	public function old_edit_product_master(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
 			'id' => 'required',
 			'product_name' => 'required',
 			'product_code' => 'required',
-			'min_alert_qty' => 'required',
 			'price' => 'required',
+			'min_alert_qty' => 'required',
 			'desc' => 'required',
-			// 'spare_parts_id' => 'required',
-			// 'item' => 'required',
-			// 'qty' => 'required',
+			// New
+			'slug' => 'required|unique:products,slug,' . $request->id,
+			'category_id' => 'required',
+			'type' => 'required',
 		], [
 			'id.required' => 'ID Is Required',
 			'product_name.required' => 'Please Enter Product Name',
 			'product_code.required' => 'Please Enter Product Code',
-			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'price.required' => 'Please Enter Price',
+			'min_alert_qty.required' => 'Please Enter Min Alert Quantity',
 			'desc.required' => 'Please Enter Description',
-			// 'spare_parts_id.required' => 'Please Select Raw Material Name',
-			// 'item.required' => 'Please Enter Item',
-			// 'qty.required' => 'Please Enter Quantity',
+			// New
+			'slug.required' => 'Please Enter Slug',
+			'slug.unique' => 'Slug Already Exist',
+			'category_id.required' => 'Please Select Category',
+			'type.required' => 'Please Select Type',
 		]);
+
+		$ProductType = $request->type;
+		if ($ProductType == 0) {
+			$validator->addRules(['regular_price' => 'required']);
+		}
+
+		if ($ProductType == 1) {
+			$validator->addRules(['attribute_ids' => 'required']);
+		}
 
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
@@ -3254,7 +3978,6 @@ class AdminAPIController extends Controller
 			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
 			$path = public_path() . '/storage/product_master/';
 			$file->move($path, $fileName);
-			// img update
 			DB::table('product_master')->where("id", $request->id)->update([
 				'image' => $fileName,
 			]);
@@ -3271,7 +3994,6 @@ class AdminAPIController extends Controller
 			}
 		}
 		$json_item = json_encode($spare_parts_Arry);
-
 		$PMasterData = ProductMaster::where('id', $request->id)->first();
 		$in['product_name'] = $request->product_name;
 		$in['product_code'] = $request->product_code;
@@ -3280,8 +4002,108 @@ class AdminAPIController extends Controller
 		$in['spare_parts'] = $json_item;
 		$in['min_alert_qty'] = $request->min_alert_qty;
 		$PMasterData->update($in);
-		$getdata = $PMasterData->getChanges();
 
+		$ProductDataSet = Products::where('product_master_id', $PMasterData->id)->first();
+		if (!empty($ProductDataSet)) {
+			if ($request->has('product_image') && count($request->product_image) > 0) {
+				$ProductImg = "";
+				foreach ($request->product_image as $key => $value) {
+					$fileName = "product-" . uniqid() . '.' . $value->getClientOriginalExtension();
+					$path = public_path() . '/storage/product_master/product_gallery/';
+					$value->move($path, $fileName);
+					$ProductImg .= $fileName . ',';
+				}
+				if (!empty($ProductDataSet->image_galley)) {
+					$ProductImg .= $ProductDataSet->image_galley;
+				}
+				$ProductDataSet->update([
+					'image_galley' => $ProductImg,
+				]);
+			}
+
+			$ProductDataSet->product_master_id = $PMasterData->id;
+			$ProductDataSet->slug = isset($request->slug) ? $request->slug : '';
+			$ProductDataSet->sku = isset($request->sku) ? $request->sku : null;
+			$ProductDataSet->category = isset($request->category_id) ? $request->category_id : null;
+			$ProductDataSet->sub_category = isset($request->sub_category_id) ? $request->sub_category_id : null;
+			$ProductDataSet->status = isset($request->status) ? $request->status : 0;
+			$ProductDataSet->type = $ProductType;
+			$ProductDataSet->features = isset($request->features) ? $request->features : null;
+			$ProductDataSet->specifications = isset($request->specifications) ? $request->specifications : null;
+			if ($ProductType == 0) {
+				$ProductDataSet->regular_price = isset($request->regular_price) ? $request->regular_price : 0;
+				$ProductDataSet->sale_price = isset($request->sale_price) ? $request->sale_price : 0;
+				$ProductDataSet->weight = isset($request->weight) ? $request->weight : 0;
+				$ProductDataSet->regular_price_usd = isset($request->regular_price_usd) ? $request->regular_price_usd : 0;
+				$ProductDataSet->sale_price_usd = isset($request->sale_price_usd) ? $request->sale_price_usd : 0;
+			} else {
+				$ProductDataSet->regular_price = 0;
+				$ProductDataSet->sale_price = 0;
+				$ProductDataSet->weight = 0;
+				$ProductDataSet->attribute_ids = isset($request->attribute_ids) ? implode(',', $request->attribute_ids) : null;
+			}
+			$ProductDataSet->meta_title = isset($request->meta_title) ? $request->meta_title : null;
+			$ProductDataSet->meta_description = isset($request->meta_description) ? $request->meta_description : null;
+			$ProductDataSet->meta_keywords = isset($request->meta_keywords) ? $request->meta_keywords : null;
+			$ProductDataSet->save();
+
+			if (isset($request['variation_regular_price']) && count($request['variation_regular_price']) > 0) {
+				ProductsVariations::where('product_id', $ProductDataSet->id)->delete();
+				ProductsVariationsItems::where('product_id', $ProductDataSet->id)->delete();
+				foreach ($request['variation_regular_price'] as $i => $val) {
+					$data = [];
+					$data['product_id'] = $ProductDataSet->id;
+					$data['regular_price'] = $request['variation_regular_price'][$i] ? $request['variation_regular_price'][$i] : 0;
+					$data['sale_price'] = $request['variation_sale_price'][$i] ? $request['variation_sale_price'][$i] : 0;
+					$data['regular_price_usd'] = $request['variation_regular_price_usd'][$i] ? $request['variation_regular_price_usd'][$i] : 0;
+					$data['sale_price_usd'] = $request['variation_sale_price_usd'][$i] ? $request['variation_sale_price_usd'][$i] : 0;
+					$data['weight'] = $request['variation_weight'][$i] ? $request['variation_weight'][$i] : 0;
+					$variations = ProductsVariations::create($data);
+					if (isset($request['attribute_item'][$i])) {
+						$parent_attr = ProductAttributes::select('parent_id')->where('id', $request['attribute_item'][$i])->first();
+						ProductsVariationsItems::create([
+							'product_id' => $ProductDataSet->id,
+							'attribute_id' => $parent_attr ? $parent_attr->parent_id : -1,
+							'item_id' => $request['attribute_item'][$i],
+							'pv_id' => $variations->id,
+						]);
+					}
+				}
+			}
+
+			if ($request->has('has_product_attribute') && $request->has('product_attribute')) {
+				ProductsSelectedAttributes::where('product_id', $ProductDataSet->id)->delete();
+				foreach ($request->product_attribute as $index => $attribute_id) {
+					$item_id = $request['product_attribute_item'][$index] ?? [];
+					ProductsSelectedAttributes::create([
+						'product_id' => $ProductDataSet->id,
+						'attribute_id' => $attribute_id,
+						'item_id' => $item_id,
+					]);
+				}
+				Products::where('id', $ProductDataSet->id)->update([
+					'product_atributes' => implode(',', $request->product_attribute),
+					'has_product_atributes' => 1,
+				]);
+			}
+
+			if ($request->has('resource_name')) {
+				ProductResources::where('product_id', $ProductDataSet->id)->delete();
+				foreach ($request->resource_name as $index => $rname) {
+					$file = $request->resource_file[$index];
+					$fileName = "product-" . uniqid() . '.' . $file->getClientOriginalExtension();
+					$path = public_path() . '/storage/product_master/resources/';
+					$file->move($path, $fileName);
+					ProductResources::create([
+						'product_id' => $ProductDataSet->id,
+						'name' => $rname,
+						'filename' => $fileName,
+					]);
+				}
+			}
+		}
+
+		$getdata = $PMasterData->getChanges();
 		$this->helper->ActivityLog($request->id, "Edit Product Master", date('Y-m-d'), json_encode($request->all()), $this->user->name, "Master > Product  ", json_encode($getdata), "Update");
 		return $this->response("Product Master Update Successfully.", false);
 	}
@@ -3300,6 +4122,11 @@ class AdminAPIController extends Controller
 
 		if (ProductMaster::find($request->id)) {
 			DB::table('product_master')->where('id', $request->id)->delete();
+			Products::where('product_master_id', $request->id)->delete();
+			ProductResources::where('product_id', $request->id)->delete();
+			ProductsSelectedAttributes::where('product_id', $request->id)->delete();
+			ProductsVariations::where('product_id', $request->id)->delete();
+			ProductsVariationsItems::where('product_id', $request->id)->delete();
 			$this->helper->ActivityLog($request->id, "Delete Product Master", date('Y-m-d'), "", $this->user->name, "Master > Product  ", "", "Delete");
 			return $this->response("Product Delete Successfully", false);
 		} else {
@@ -5059,5 +5886,602 @@ class AdminAPIController extends Controller
 				return $this->response("Message could not be sent.", true);
 			}
 		}
+	}
+
+
+	// Start Category
+	public function manage_category(Request $request)
+	{
+		$category = Category::select('*', DB::raw("CASE WHEN image IS NOT NULL THEN CONCAT('" . asset('storage/category') . "/', image) ELSE '' END as image"), DB::raw("CASE WHEN status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"))
+			->when($request->search, function ($q, $search) {
+				$q->where(function ($q) use ($search) {
+					$q->where('name', 'LIKE', "%{$search}%")
+						->orWhere('slug', 'LIKE', "%{$search}%");
+				});
+			})
+			->orderBy('id', 'DESC')
+			->paginate(10);
+		return $this->response('Category List', false, $category);
+	}
+
+	public function get_specific_category(Request $request)
+	{
+		$data = Category::find($request->id);
+		if (empty($data)) {
+			return $this->response('Category not found', true);
+		}
+		$data->status_label = $data->status == 1 ? 'Publish' : 'Draft';
+		$data->image = !empty($data->image) ? asset('storage/category/' . $data->image) : '';
+		return $this->response('Category Detail', false, $data);
+	}
+
+	public function add_category(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'slug' => 'required|unique:categories,slug',
+			'image' => 'required',
+		], [
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'image.required' => 'Please select image',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$fileName = null;
+		if ($request->hasFile('image')) {
+			$file = $request->file('image');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/category/';
+			$file->move($path, $fileName);
+		}
+
+		Category::create([
+			'name' => isset($request->name) ? $request->name : '',
+			'slug' => isset($request->slug) ? $request->slug : '',
+			'status' => isset($request->status) ? $request->status : 0,
+			'image' => isset($fileName) ? $fileName : null,
+		]);
+		return $this->response('Category add successfully.', false);
+	}
+
+	public function update_category(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'slug' => 'required|unique:categories,slug,' . $request->id,
+		], [
+			'id.required' => 'Required parameters missing',
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$category = Category::find($request->id);
+
+		if (empty($category)) {
+			return $this->response('Category not found', true);
+		}
+
+		$category->name = isset($request->name) ? $request->name : '';
+		$category->status = isset($request->status) ? $request->status : 0;
+		$category->slug = isset($request->slug) ? $request->slug : '';
+		if ($request->hasFile('image')) {
+			if (!empty($category->image)) {
+				$oldImage = $category->image;
+				$path = public_path('/storage/category/' . $oldImage);
+				if (File::exists($path)) {
+					File::delete($path);
+				}
+			}
+			$file = $request->file('image');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/category/';
+			$file->move($path, $fileName);
+			$category->image = $fileName;
+		}
+		$category->save();
+		return $this->response('Category updated successfully.', false);
+	}
+
+	public function delete_category(Request $request)
+	{
+		$category = Category::find($request->id);
+		if (empty($category)) {
+			return $this->response('Category not found', true);
+		}
+		if (!empty($category->image)) {
+			$path = public_path('/storage/category/' . $category->image);
+			if (File::exists($path)) {
+				File::delete($path);
+			}
+		}
+		$category->delete();
+		return $this->response('Category deleted successfully.', false);
+	}
+
+	// Start Sub Category
+	public function manage_sub_category(Request $request)
+	{
+		$subCategory = SubCategory::join('categories', 'sub_category.c_id', '=', 'categories.id')
+			->select('sub_category.*', 'categories.name as category_name', DB::raw("CASE WHEN sub_category.image IS NOT NULL THEN CONCAT('" . asset('storage/sub_category') . "/', sub_category.image) ELSE '' END as image"), DB::raw("CASE WHEN sub_category.status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"))
+			->when($request->search, function ($q, $search) {
+				$q->where(function ($q) use ($search) {
+					$q->where('sub_category.name', 'LIKE', "%{$search}%")
+						->orWhere('sub_category.slug', 'LIKE', "%{$search}%");
+				});
+			})
+			->orderBy('sub_category.id', 'DESC')
+			->paginate(10);
+		return $this->response('Sub Category List', false, $subCategory);
+	}
+
+	public function get_specific_sub_category(Request $request)
+	{
+		$data = SubCategory::join('categories', 'sub_category.c_id', '=', 'categories.id')
+			->select(
+				'sub_category.*',
+				'categories.name as category_name',
+				DB::raw("CASE WHEN sub_category.status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"),
+				DB::raw("CASE WHEN sub_category.image IS NOT NULL THEN CONCAT('" . asset('storage/sub_category') . "/', sub_category.image) ELSE '' END as image"),
+			)
+			->where('sub_category.id', $request->id)
+			->first();
+		if (empty($data)) {
+			return $this->response('Sub Category not found', true);
+		}
+		return $this->response('Sub Category Detail', false, $data);
+	}
+
+	public function add_sub_category(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'slug' => 'required|unique:sub_category,slug',
+			'image' => 'required',
+			'c_id' => 'required',
+		], [
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'image.required' => 'Please select image',
+			'c_id.required' => 'Please select category',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$fileName = null;
+		if ($request->hasFile('image')) {
+			$file = $request->file('image');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/sub_category/';
+			$file->move($path, $fileName);
+		}
+
+		SubCategory::create([
+			'name' => isset($request->name) ? $request->name : '',
+			'slug' => isset($request->slug) ? $request->slug : '',
+			'status' => isset($request->status) ? $request->status : 0,
+			'image' => isset($fileName) ? $fileName : null,
+			'c_id' => isset($request->c_id) ? $request->c_id : null,
+		]);
+		return $this->response('Sub Category add successfully.', false);
+	}
+
+	public function update_sub_category(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'slug' => 'required|unique:sub_category,slug,' . $request->id,
+			'c_id' => 'required',
+		], [
+			'id.required' => 'Required parameters missing',
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'c_id.required' => 'Please select category',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$subCategory = SubCategory::find($request->id);
+		if (empty($subCategory)) {
+			return $this->response('Sub Category not found', true);
+		}
+
+		if ($request->hasFile('image')) {
+			$file = $request->file('image');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/sub_category/';
+			$file->move($path, $fileName);
+			if (!empty($subCategory->image)) {
+				$path = public_path('/storage/sub_category/' . $subCategory->image);
+				if (File::exists($path)) {
+					File::delete($path);
+				}
+			}
+			$subCategory->image = $fileName;
+		}
+
+		$subCategory->name = isset($request->name) ? $request->name : null;
+		$subCategory->slug = isset($request->slug) ? $request->slug : null;
+		$subCategory->status = isset($request->status) ? $request->status : 0;
+		$subCategory->c_id = isset($request->c_id) ? $request->c_id : null;
+		$subCategory->save();
+		return $this->response('Sub Category updated successfully.', false);
+	}
+
+	public function delete_sub_category(Request $request)
+	{
+		$subCategory = SubCategory::find($request->id);
+		if (empty($subCategory)) {
+			return $this->response('Sub Category not found', true);
+		}
+		if (!empty($subCategory->image)) {
+			$path = public_path('/storage/sub_category/' . $subCategory->image);
+			if (File::exists($path)) {
+				File::delete($path);
+			}
+		}
+		$subCategory->delete();
+		return $this->response('Sub Category deleted successfully.', false);
+	}
+
+	// Manage Product Attributes
+	public function manage_product_attribute(Request $request)
+	{
+		$productAttribute = ProductAttributes::when($request->search, function ($q, $search) {
+			$q->where(function ($q) use ($search) {
+				$q->where('name', 'LIKE', "%{$search}%")
+					->orWhere('slug', 'LIKE', "%{$search}%");
+			});
+		})
+			->where('type', 0)
+			->select(
+				'id',
+				'name',
+				'slug',
+				'description',
+				'created_at',
+				'updated_at',
+				DB::raw("(SELECT COUNT(*) FROM product_attributes pa WHERE pa.parent_id = product_attributes.id) AS total_item")
+			)
+			->paginate(10);
+		return $this->response('Product Attribute List', false, $productAttribute);
+	}
+
+	public function get_specific_product_attribute(Request $request)
+	{
+		$productAttribute = ProductAttributes::where('type', 0)
+			->select(
+				'id',
+				"name",
+				"slug",
+				"description",
+				"created_at",
+				"updated_at",
+				DB::raw("(SELECT COUNT(*) FROM product_attributes pa WHERE pa.parent_id = product_attributes.id) AS total_item")
+			)->find($request->id);
+		if (empty($productAttribute)) {
+			return $this->response('Product Attribute not found', true);
+		}
+		return $this->response('Product Attribute Detail', false, $productAttribute);
+	}
+
+	public function get_product_attribute(Request $request)
+	{
+		$productAttribute = ProductAttributes::where('type', 1)
+			->select('id', "name", "slug", "description", "created_at", "updated_at")
+			->where('parent_id', $request->id)
+			->get();
+		if (empty($productAttribute)) {
+			return $this->response('Product Attribute not found', true);
+		}
+		return $this->response('Product Attribute Detail', false, $productAttribute);
+	}
+
+	public function add_product_attribute(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'slug' => 'required|unique:product_attributes,slug',
+			'description' => 'required',
+		], [
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'description.required' => 'Please enter description',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		ProductAttributes::create([
+			'name' => isset($request->name) ? $request->name : null,
+			'slug' => isset($request->slug) ? $request->slug : null,
+			'description' => isset($request->description) ? $request->description : null,
+			'type' => 0,
+		]);
+		return $this->response('Product Attribute add successfully.', false);
+	}
+
+	public function update_product_attribute(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'slug' => 'required|unique:product_attributes,slug,' . $request->id,
+			'description' => 'required',
+		], [
+			'id.required' => 'Required parameters missing',
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'description.required' => 'Please enter description',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$productAttribute = ProductAttributes::find($request->id);
+		if (empty($productAttribute)) {
+			return $this->response('Product Attribute not found', true);
+		}
+
+		$productAttribute->name = isset($request->name) ? $request->name : null;
+		$productAttribute->slug = isset($request->slug) ? $request->slug : null;
+		$productAttribute->description = isset($request->description) ? $request->description : null;
+		$productAttribute->save();
+		return $this->response('Product Attribute updated successfully.', false);
+	}
+
+	public function delete_product_attribute(Request $request)
+	{
+		$productAttribute = ProductAttributes::find($request->id);
+		if (empty($productAttribute)) {
+			return $this->response('Product Attribute not found', true);
+		}
+		$productAttribute->delete();
+		return $this->response('Product Attribute deleted successfully.', false);
+	}
+
+	// Manage Product Attributes Items
+	public function manage_product_attribute_items(Request $request)
+	{
+		if (empty($request->parent_id)) {
+			return $this->response('Parent ID is required', true);
+		}
+		$productItem = ProductAttributes::when($request->search, function ($q, $search) {
+			$q->where(function ($q) use ($search) {
+				$q->where('product_attributes.name', 'LIKE', "%{$search}%")
+					->orWhere('product_attributes.slug', 'LIKE', "%{$search}%");
+			});
+		})
+			->where('type', 1)
+			->where('parent_id', $request->parent_id)
+			->select('id', "name", "slug", "description", "created_at", "updated_at")->paginate(10);
+		return $this->response('Product Item List', false, $productItem);
+	}
+
+	public function add_product_attribute_items(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'slug' => 'required|unique:product_attributes,slug',
+			'description' => 'required',
+			'parent_id' => 'required',
+		], [
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'description.required' => 'Please enter description',
+			'parent_id.required' => 'Please enter parent id',
+		]);
+
+		if ($request->is_color == 1) {
+			$validator->addRules(['color_code' => 'required']);
+		}
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		if ($request->is_color == 1) {
+			$color_code = isset($request->color_code) ? $request->color_code : null;
+		} else {
+			$color_code = null;
+		}
+
+		ProductAttributes::create([
+			'name' => isset($request->name) ? $request->name : null,
+			'slug' => isset($request->slug) ? $request->slug : null,
+			'description' => isset($request->description) ? $request->description : null,
+			'parent_id' => isset($request->parent_id) ? $request->parent_id : 0,
+			'type' => 1,
+			'is_color' => isset($request->is_color) ? $request->is_color : 0,
+			'color_code' => $color_code,
+		]);
+		return $this->response('Product Item add successfully.', false);
+	}
+
+	public function update_product_attribute_items(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'slug' => 'required|unique:product_attributes,slug,' . $request->id,
+			'description' => 'required',
+			'parent_id' => 'required',
+		], [
+			'id.required' => 'Required parameters missing',
+			'name.required' => 'Please enter name',
+			'slug.required' => 'Please enter slug',
+			'slug.unique' => 'Entered slug is already in used!',
+			'description.required' => 'Please enter description',
+			'parent_id.required' => 'Please enter parent id',
+		]);
+
+		if ($request->is_color == 1) {
+			$validator->addRules(['color_code' => 'required']);
+		}
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$productItem = ProductAttributes::find($request->id);
+		if (empty($productItem)) {
+			return $this->response('Product Item not found', true);
+		}
+
+		$productItem->name = isset($request->name) ? $request->name : null;
+		$productItem->slug = isset($request->slug) ? $request->slug : null;
+		$productItem->description = isset($request->description) ? $request->description : null;
+		$productItem->parent_id = isset($request->parent_id) ? $request->parent_id : 0;
+		$productItem->type = 1;
+		$productItem->is_color = isset($request->is_color) ? $request->is_color : 0;
+		if ($request->is_color == 1) {
+			$productItem->color_code = isset($request->color_code) ? $request->color_code : null;
+		} else {
+			$productItem->color_code = null;
+		}
+		$productItem->save();
+		return $this->response('Product Item updated successfully.', false);
+	}
+
+	public function delete_product_attribute_items(Request $request)
+	{
+		$productItem = ProductAttributes::find($request->id);
+		if (empty($productItem)) {
+			return $this->response('Product Item not found', true);
+		}
+		$productItem->delete();
+		return $this->response('Product Item deleted successfully.', false);
+	}
+
+	// Manage Product Review
+	public function manage_product_review(Request $request)
+	{
+		$search = isset($request->search) ? $request->search : '';
+
+		$productReview = ProductReviews::join("products", function ($join) {
+			$join->on("product_reviews.product_id", "=", "products.id");
+		})
+			->join("users", function ($join) {
+				$join->on("product_reviews.user_id", "=", "users.id");
+			})
+			->when($search, function ($q, $search) {
+				$q->where(function ($q) use ($search) {
+					$q->where('product_reviews.title', 'LIKE', "%{$search}%")
+						->orWhere('product_reviews.name', 'LIKE', "%{$search}%")
+						->orWhere('products.title', 'LIKE', "%{$search}%");
+				});
+			})
+			->select("product_reviews.*", "products.title as product_name", "users.name as user_name", "users.email as user_email", "users.mobile as user_mobile")
+			->paginate(10);
+		return $this->response('Product Review List', false, $productReview);
+	}
+
+	public function change_product_review_status(Request $request)
+	{
+		ProductReviews::where("id", $request->id)->update(["status" => $request->status]);
+		return $this->response('Product Review Status Changed successfully.', false);
+	}
+
+	public function delete_product_review(Request $request)
+	{
+		ProductReviews::where("id", $request->id)->delete();
+		return $this->response('Product Review Deleted successfully.', false);
+	}
+
+	// Manage Banner
+	public function manage_banner()
+	{
+		$banner = Banners::where('type', 0)->select('banners.*', DB::raw("CASE WHEN path IS NOT NULL THEN CONCAT('" . asset('storage/home_banners') . "/', path) ELSE '' END as path"), DB::raw("CASE WHEN mobile_path IS NOT NULL THEN CONCAT('" . asset('storage/home_banners') . "/', mobile_path) ELSE '' END as mobile_path"))->get();
+		return $this->response('Banner List', false, $banner);
+	}
+
+	public function add_banner(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'desktop_banner_images' => 'mimes:jpg,png,jpeg,gif|dimensions:width=1920,height=700',
+			'moblie_banner_images' => 'mimes:jpg,png,jpeg,gif|dimensions:width=767,height=1000',
+			'call_to_actioin_link' => 'required',
+		], [
+			'desktop_banner_images.dimensions' => 'Banner image must be in size of 1920w x 700h',
+			'moblie_banner_images.dimensions' => 'Moblie Banner Image must be in size of 767w x 1000h',
+			'call_to_actioin_link.required' => 'Please enter redirect link',
+		]);
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+		$desktop_image = $request->file('desktop_banner_images');
+		$moblie_image = $request->file('moblie_banner_images');
+		if ($desktop_image && $moblie_image) {
+			$path = public_path() . '/storage/home_banners/';
+			$desktopBannerImageName = null;
+			if ($desktop_image) {
+				$desktopBannerImageName = uniqid() . '.' . $desktop_image->getClientOriginalExtension();
+				$desktop_image->move($path, $desktopBannerImageName);
+			}
+			$moblieBannerImageName = null;
+			if ($moblie_image) {
+				$moblieBannerImageName = uniqid() . '.' . $moblie_image->getClientOriginalExtension();
+				$moblie_image->move($path, $moblieBannerImageName);
+			}
+			Banners::create([
+				'path' => $desktopBannerImageName,
+				'mobile_path' => $moblieBannerImageName,
+				'type' => 0,
+				'call_to_actioin_link' => $request->call_to_actioin_link,
+			]);
+			return $this->response('Banner added successfully.', false);
+		}
+	}
+
+	public function delete_banner(Request $request)
+	{
+		$BannerData = Banners::where('id', $request->id)->first();
+		if (empty($BannerData)) {
+			return $this->response('Banner not found', true);
+		}
+		// file unset
+		if ($BannerData->path) {
+			unlink(public_path() . '/storage/home_banners/' . $BannerData->path);
+		}
+		if ($BannerData->mobile_path) {
+			unlink(public_path() . '/storage/home_banners/' . $BannerData->mobile_path);
+		}
+		$BannerData->delete();
+		return $this->response('Banner deleted successfully.', false);
+	}
+
+	// Manage Settings
+	public function manage_tax_setting()
+	{
+		$tax = Settings::select('id', 'name', 'value')->where('id', 1)->first();
+		return $this->response('Settings', false, $tax);
+	}
+
+	public function change_tax_setting(Request $request)
+	{
+		Settings::where('id', 1)->update(['value' => $request->value]);
+		return $this->response('Tax settings updated successfully.', false);
 	}
 }

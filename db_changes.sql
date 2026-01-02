@@ -259,3 +259,330 @@ ALTER TABLE `product_master` CHANGE `min_alert_qty` `min_alert_qty` decimal(8,0)
 
 -- 04-08-2025
 ALTER TABLE `invoice` CHANGE `invoice_no` `invoice_no` varchar(256) NULL AFTER `ship_to`;
+
+-- 23-12-2025
+CREATE TABLE `banners` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `path` varchar(255) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `mobile_path` varchar(255) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `type` int NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `call_to_actioin_link` varchar(500) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci
+
+CREATE TABLE `addresses` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `address` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
+  `city` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `state` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `zip_code` varchar(10) COLLATE utf8mb4_general_ci NOT NULL,
+  `country` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `is_default` int NOT NULL DEFAULT '0' COMMENT '1=default',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `categories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `slug` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` int NOT NULL COMMENT '0=Draft, 1=Published',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `contact_us` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(250) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `email` varchar(250) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `reason` varchar(250) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `message` text COLLATE utf8mb3_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `country_checker_log` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip_address` varchar(50) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `country_name` varchar(100) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `country_code` varchar(10) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `discount_history` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `code` int NOT NULL,
+  `order_id` int NOT NULL,
+  `code_id` int NOT NULL,
+  `type` int NOT NULL,
+  `amount` double NOT NULL DEFAULT '0',
+  `user_id` int NOT NULL,
+  `remarks` text COLLATE utf8mb3_unicode_ci,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `gift_card` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `amount` double NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `gift_card_orders` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `user_id` int NOT NULL,
+  `user_email` varchar(250) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `amount` double NOT NULL DEFAULT '0',
+  `gift_card_number` varchar(30) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `to_name` varchar(60) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `to_email` varchar(60) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `to_phone` varchar(20) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `message` text COLLATE utf8mb3_unicode_ci,
+  `is_claimed` int NOT NULL DEFAULT '0' COMMENT '0=No, 1=Yes',
+  `pay_status` int NOT NULL DEFAULT '0' COMMENT '0=unpaid,1=paid',
+  `paid_by` int NOT NULL DEFAULT '0',
+  `expiry_date` date DEFAULT NULL,
+  `pending_amount` double NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `order_items` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `order_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `product_name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `variations` varchar(350) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `sub_title` varchar(350) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `base_amount` double NOT NULL DEFAULT '0',
+  `quantity` double NOT NULL DEFAULT '0',
+  `tax_amount` double NOT NULL DEFAULT '0',
+  `discount_amount` double NOT NULL DEFAULT '0',
+  `total_amount` double NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `orders` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `order_no` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `user_id` int NOT NULL,
+  `pay_status` int NOT NULL DEFAULT '0' COMMENT '0=unpaid,1=paid',
+  `base_amount` double NOT NULL DEFAULT '0',
+  `discount_amount` double NOT NULL DEFAULT '0',
+  `shipping_amount` double NOT NULL DEFAULT '0',
+  `tax_amount` double NOT NULL DEFAULT '0',
+  `tax_percent` double NOT NULL DEFAULT '0',
+  `total_amount` double NOT NULL DEFAULT '0',
+  `status` int NOT NULL DEFAULT '0' COMMENT '0=pending, 1=accepted, 2=out for delivery, -1=rejected	,3=delivered',
+  `instructions` text COLLATE utf8mb4_general_ci,
+  `order_hash` text COLLATE utf8mb4_general_ci NOT NULL,
+  `payment_ref_id` int NOT NULL DEFAULT '-1',
+  `billing_id` int NOT NULL DEFAULT '0',
+  `shipping_id` int NOT NULL DEFAULT '0',
+  `pay_remarks` text COLLATE utf8mb4_general_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `paid_by` int NOT NULL COMMENT '0=stripe, 1=razorpay',
+  `discount_code` varchar(250) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `discount_code_id` int NOT NULL DEFAULT '-1',
+  `discount_type` int NOT NULL DEFAULT '-1' COMMENT '0= gift card',
+  `currency_symbol` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'CAD',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `payment_reference` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `pay_id` varchar(50) NOT NULL,
+  `cust_id` int NOT NULL,
+  `card_details` text,
+  `amount` double NOT NULL,
+  `pay_by` varchar(100) NOT NULL DEFAULT '',
+  `order_id` int NOT NULL,
+  `status` int NOT NULL DEFAULT '-1' COMMENT '0=failed, 1=success',
+  `json` longtext NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE `product_attributes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(250) COLLATE utf8mb4_general_ci NOT NULL,
+  `slug` varchar(300) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
+  `type` int NOT NULL COMMENT '0=parent, 1=sub',
+  `parent_id` int NOT NULL DEFAULT '0',
+  `is_color` int NOT NULL DEFAULT '0' COMMENT '0=no,1=yes',
+  `color_code` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sort_order` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `product_resource` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` int NOT NULL,
+  `name` varchar(255) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `filename` varchar(255) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `product_reviews` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `title` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `email` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `rating` int NOT NULL DEFAULT '0',
+  `description` text COLLATE utf8mb4_general_ci NOT NULL,
+  `status` int NOT NULL DEFAULT '0' COMMENT '0=pending,1=approve,2=reject',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `product_selected_attributes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `attribute_id` int NOT NULL,
+  `item_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `products` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `parent_id` int NOT NULL DEFAULT '0' COMMENT '0=parent,0>variation_product',
+  `attribute_id` int NOT NULL DEFAULT '-1',
+  `item_id` int NOT NULL DEFAULT '-1',
+  `title` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `slug` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci NOT NULL,
+  `sku` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `image_galley` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `category` int NOT NULL,
+  `sub_category` int NOT NULL DEFAULT '0',
+  `status` int NOT NULL,
+  `type` int NOT NULL COMMENT '0=simple, 1=variations',
+  `features` longtext COLLATE utf8mb4_general_ci,
+  `specifications` longtext COLLATE utf8mb4_general_ci,
+  `regular_price` double NOT NULL DEFAULT '0',
+  `sale_price` double DEFAULT '0',
+  `sale_price_usd` double NOT NULL DEFAULT '0',
+  `regular_price_usd` double NOT NULL DEFAULT '0',
+  `sale_price_inr` double NOT NULL DEFAULT '0',
+  `regular_price_inr` double NOT NULL DEFAULT '0',
+  `weight` varchar(250) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `attribute_ids` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `has_product_atributes` int NOT NULL DEFAULT '0' COMMENT '0=no, 1=yes',
+  `product_atributes` text COLLATE utf8mb4_general_ci NOT NULL,
+  `meta_title` varchar(80) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `meta_description` varchar(300) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `meta_keywords` text COLLATE utf8mb4_general_ci NOT NULL,
+  `has_stock` int NOT NULL DEFAULT '1' COMMENT '0=No, 1=Yes, Only for simple product',
+  `reorder` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `products_variations` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` int NOT NULL,
+  `sale_price` double NOT NULL DEFAULT '0',
+  `regular_price` double NOT NULL DEFAULT '0',
+  `weight` varchar(250) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sale_price_usd` double NOT NULL DEFAULT '0',
+  `regular_price_usd` double NOT NULL DEFAULT '0',
+  `sale_price_inr` double NOT NULL DEFAULT '0',
+  `regular_price_inr` double NOT NULL DEFAULT '0',
+  `has_stock` int NOT NULL DEFAULT '1' COMMENT '0=No, 1=Yes',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `products_variations_items` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` int NOT NULL,
+  `attribute_id` int NOT NULL,
+  `item_id` int NOT NULL,
+  `pv_id` int NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `settings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `value` varchar(5) COLLATE utf8mb3_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+CREATE TABLE `sub_category` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `c_id` int NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `slug` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` int NOT NULL COMMENT '0=Draft, 1=Published	',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `reorder` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `webhook_calls` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `headers` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `exception` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `products`
+CHANGE `title` `title` varchar(255) COLLATE 'utf8mb4_general_ci' NULL AFTER `item_id`,
+CHANGE `slug` `slug` varchar(255) COLLATE 'utf8mb4_general_ci' NULL AFTER `title`,
+CHANGE `description` `description` text COLLATE 'utf8mb4_general_ci' NULL AFTER `slug`,
+CHANGE `sku` `sku` varchar(255) COLLATE 'utf8mb4_general_ci' NULL AFTER `description`,
+CHANGE `category` `category` int NULL AFTER `image_galley`,
+CHANGE `status` `status` int NULL AFTER `sub_category`,
+CHANGE `product_atributes` `product_atributes` text COLLATE 'utf8mb4_general_ci' NULL AFTER `has_product_atributes`,
+CHANGE `meta_keywords` `meta_keywords` text COLLATE 'utf8mb4_general_ci' NULL AFTER `meta_description`;
+
+ALTER TABLE `products` ADD `product_master_id` int NULL AFTER `id`;
+
+
+-- 30-12-2025
+
+ALTER TABLE `users` ADD `last_name` varchar(256) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `name`;
+
+ALTER TABLE `users` CHANGE `access_token` `access_token` longtext COLLATE 'utf8mb4_unicode_ci' NULL AFTER `device_token`;

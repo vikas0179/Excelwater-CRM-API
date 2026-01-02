@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminAPIController;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\UserAPIController;
 use App\Http\Controllers\HomeController;
 
 /*
@@ -182,5 +182,94 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::get('get_materia_report', [AdminAPIController::class, 'GetMaterialReport']);
 		Route::post('get_product_report', [AdminAPIController::class, 'GetProductReportDashboard']);
 		Route::post('get_material_report', [AdminAPIController::class, 'GetMaterialReportDashboard']);
+
+		// Manage Category
+		Route::get('manage_category', [AdminAPIController::class, 'manage_category']);
+		Route::post('add_category', [AdminAPIController::class, 'add_category']);
+		Route::post('update_category', [AdminAPIController::class, 'update_category']);
+		Route::post('delete_category', [AdminAPIController::class, 'delete_category']);
+		Route::get('get_specific_category/{id}', [AdminAPIController::class, 'get_specific_category']);
+
+		// Manage Sub Category
+		Route::get('manage_sub_category', [AdminAPIController::class, 'manage_sub_category']);
+		Route::post('add_sub_category', [AdminAPIController::class, 'add_sub_category']);
+		Route::post('update_sub_category', [AdminAPIController::class, 'update_sub_category']);
+		Route::post('delete_sub_category', [AdminAPIController::class, 'delete_sub_category']);
+		Route::get('get_specific_sub_category/{id}', [AdminAPIController::class, 'get_specific_sub_category']);
+
+		// Manage Product Attribute
+		Route::get('manage_product_attribute', [AdminAPIController::class, 'manage_product_attribute']);
+		Route::post('add_product_attribute', [AdminAPIController::class, 'add_product_attribute']);
+		Route::post('update_product_attribute', [AdminAPIController::class, 'update_product_attribute']);
+		Route::post('delete_product_attribute', [AdminAPIController::class, 'delete_product_attribute']);
+		Route::get('get_specific_product_attribute/{id}', [AdminAPIController::class, 'get_specific_product_attribute']);
+		Route::post('get_product_attribute', [AdminAPIController::class, 'get_product_attribute']);
+
+		// Manage Product Attribute Items
+		Route::get('manage_product_attribute_items', [AdminAPIController::class, 'manage_product_attribute_items']);
+		Route::post('add_product_attribute_items', [AdminAPIController::class, 'add_product_attribute_items']);
+		Route::post('update_product_attribute_items', [AdminAPIController::class, 'update_product_attribute_items']);
+		Route::post('delete_product_attribute_items', [AdminAPIController::class, 'delete_product_attribute_items']);
+		
+		// Manage Product Review
+		Route::get('manage_product_review', [AdminAPIController::class, 'manage_product_review']);
+		Route::post('change_product_review_status', [AdminAPIController::class, 'change_product_review_status']);
+		Route::post('delete_product_review', [AdminAPIController::class, 'delete_product_review']);
+
+		// Manage Banner
+		Route::get('manage_banner', [AdminAPIController::class, 'manage_banner']);
+		Route::post('add_banner', [AdminAPIController::class, 'add_banner']);
+		Route::post('delete_banner', [AdminAPIController::class, 'delete_banner']);
+
+		// Manage Tax
+		Route::get('manage_tax_setting', [AdminAPIController::class, 'manage_tax_setting']);
+		Route::post('change_tax_setting', [AdminAPIController::class, 'change_tax_setting']);
 	});
+});
+
+
+
+
+
+//admin_new
+Route::group(['prefix' => 'user', 'as' => 'user.'], function () {
+
+	Route::post('login',[UserAPIController::class,'login']);                                               	// Done
+	Route::post('registration',[UserAPIController::class,'registration']);                                 	// Done
+	Route::post('forgot-password', [UserAPIController::class,'forgot_password']);                          	// Done
+	Route::post('verify-token', [UserAPIController::class,'verify_token']);                                	// Done
+	Route::post('reset-password', [UserAPIController::class,'reset_password']);                            	// Done
+	Route::post('place-order',[UserAPIController::class,'place_order']);									// Done
+	Route::get('product-list',[UserAPIController::class,'product_list']);      								// Done
+	Route::get('product-details',[UserAPIController::class,'product_details']);								// Done
+	Route::post('get-shopping-cart-products',[UserAPIController::class,'get_shopping_cart_products']);   	// Done
+	Route::get('get-data',[UserAPIController::class,'get_data']);											// Done
+	Route::get('get-filter-data',[UserAPIController::class,'get_filter_data']);								// Done
+	Route::post('contact-us',[UserAPIController::class,'contact_us']);										// Done
+	Route::post('partner-with-us',[UserAPIController::class,'partner_with_us']);							// Done
+	Route::get('home',[UserAPIController::class,'home_page']);												// Done
+	Route::get('get-gift-card-amounts',[UserAPIController::class,'get_gift_card_amounts']);					// Done
+	Route::post('gift-card-place-order',[UserAPIController::class,'gift_card_place_order']);				// Done
+	Route::post('apply-gift-card',[UserAPIController::class,'apply_gift_card']);							// Done
+	Route::post('apply-gift-card-otp',[UserAPIController::class,'apply_gift_card_otp']);					// Done
+	Route::post('payment-success',[UserAPIController::class,'payment_success']);							// Done
+	Route::post('payment-fail',[UserAPIController::class,'payment_fail']);									// Done
+	// Jwt Verify
+	Route::group(['middleware' => 'jwt.verify'], function(){
+		Route::get('logout', [UserAPIController::class,'logout']);											// Done
+		Route::get('get-profile', [UserAPIController::class,'get_profile']);                				// Done
+		Route::post('update-profile', [UserAPIController::class,'update_profile']);							// Done
+		Route::post('change-password', [UserAPIController::class, 'change_password']);      				// Done
+		Route::post('add-address', [UserAPIController::class, 'add_address']); 								// Done
+		Route::post('update-address', [UserAPIController::class, 'update_address']);        				// Done
+		Route::get('address-list', [UserAPIController::class, 'address_list']);								// Done
+		Route::get('get-address', [UserAPIController::class, 'get_address']);								// Done
+		Route::get('delete-address', [UserAPIController::class, 'delete_address']);         				// Done
+		Route::get('order-list',[UserAPIController::class,'order_list']);                   				// Done
+		Route::get('order-details',[UserAPIController::class,'order_details']);								// Done
+		Route::post('product-review', [UserAPIController::class, 'product_review']);						// Done
+		Route::get('print-invoice/{id}',[UserAPIController::class,'print_invoice']);						// Done	
+		Route::get('gift-card-order-list',[UserAPIController::class,'gift_card_order_list']);				// Done
+		Route::get('gift-card-order-details/{id}',[UserAPIController::class,'gift_card_order_details']);	// Done
+	}); 
 });
