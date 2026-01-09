@@ -586,3 +586,15 @@ ALTER TABLE `products` ADD `product_master_id` int NULL AFTER `id`;
 ALTER TABLE `users` ADD `last_name` varchar(256) COLLATE 'utf8mb4_unicode_ci' NULL AFTER `name`;
 
 ALTER TABLE `users` CHANGE `access_token` `access_token` longtext COLLATE 'utf8mb4_unicode_ci' NULL AFTER `device_token`;
+
+-- 08-01-2026
+CREATE TABLE `brand` (
+  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` varchar(256) NULL,
+  `picture` text NULL,
+  `status` tinyint NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE `product_master` ADD `brand_id` int NULL AFTER `id`;

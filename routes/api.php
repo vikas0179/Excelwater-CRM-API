@@ -16,6 +16,7 @@ use App\Http\Controllers\HomeController;
 |
 */
 
+// Admin
 Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 	Route::post('leads/save', [AdminAPIController::class, 'lead_save']);
@@ -224,6 +225,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		// Manage Tax
 		Route::get('manage_tax_setting', [AdminAPIController::class, 'manage_tax_setting']);
 		Route::post('change_tax_setting', [AdminAPIController::class, 'change_tax_setting']);
+
+		// Brand
+		Route::get('get_brands', [AdminAPIController::class, 'get_brands']);
+		Route::post('add_brand', [AdminAPIController::class, 'add_brand']);
+		Route::post('update_brand', [AdminAPIController::class, 'update_brand']);
+		Route::post('delete_brand', [AdminAPIController::class, 'delete_brand']);
+		Route::get('get_brand/{id}', [AdminAPIController::class, 'get_brand']);
 	});
 });
 
@@ -231,7 +239,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 
 
 
-//admin_new
+// Users
 Route::group(['prefix' => 'user', 'as' => 'user.'], function () {
 
 	Route::post('login',[UserAPIController::class,'login']);                                               	// Done

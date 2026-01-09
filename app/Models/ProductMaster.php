@@ -9,6 +9,7 @@ class ProductMaster extends Model
 	protected $table = 'product_master';   
 
 	protected $fillable = [
+        'brand_id',
         'product_name',
         'product_code',
         'price',

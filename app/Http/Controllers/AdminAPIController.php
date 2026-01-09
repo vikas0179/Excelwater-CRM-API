@@ -52,6 +52,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Helper;
 use App\Models\ActivityLog;
 use App\Models\Banners;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductAttributes;
 use App\Models\ProductResources;
@@ -3290,7 +3291,8 @@ class AdminAPIController extends Controller
 	public function product_master()
 	{
 		$ProductMasterList = ProductMaster::leftJoin('invoice_item', 'invoice_item.product_id', '=', 'product_master.id')
-			->select('product_master.*', DB::raw("SUM(invoice_item.amount) as final_price"))
+			->leftJoin('brand', 'brand.id', '=', 'product_master.brand_id')
+			->select('product_master.*', "brand.name as brand_name",  DB::raw('COALESCE(SUM(invoice_item.amount), 0) as final_price'))
 			->groupBy('product_master.id')
 			->orderBy("product_master.id", "DESC")
 			->paginate(100);
@@ -3576,6 +3578,7 @@ class AdminAPIController extends Controller
 		$json_item = json_encode($spare_parts_Arry);
 		$pMaster = new ProductMaster();
 		$pMaster->product_name = $request->product_name;
+		$pMaster->brand_id = isset($request->brand_id) && !empty($request->brand_id) ? $request->brand_id : null;
 		$pMaster->product_code = $request->product_code;
 		$pMaster->price = $request->price;
 		$pMaster->desc = $request->desc;
@@ -3779,6 +3782,7 @@ class AdminAPIController extends Controller
 			$in['desc'] = $request->desc;
 			$in['spare_parts'] = $json_item;
 			$in['min_alert_qty'] = $request->min_alert_qty;
+			$in['brand_id'] = isset($request->brand_id) && !empty($request->brand_id) ? $request->brand_id : null;
 			$PMasterData->update($in);
 
 			if (!empty($ProductDataSet)) {
@@ -6483,5 +6487,81 @@ class AdminAPIController extends Controller
 	{
 		Settings::where('id', 1)->update(['value' => $request->value]);
 		return $this->response('Tax settings updated successfully.', false);
+	}
+
+	public function get_brands()
+	{
+		$brands = Brand::select('brand.*',  DB::raw("CASE WHEN brand.picture IS NOT NULL THEN CONCAT('" . asset('storage/brand') . "/', brand.picture) ELSE '' END as picture"))->paginate(10);
+		return $this->response('Brands', false, $brands);
+	}
+
+	public function add_brand(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'picture' => 'required',
+		]);
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+		$BrandStore = new Brand();
+		if ($request->hasFile('picture')) {
+			$file = $request->file('picture');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/brand/';
+			$file->move($path, $fileName);
+			$BrandStore->picture = $fileName;
+		}
+		$BrandStore->name = $request->name;
+		$BrandStore->save();
+		return $this->response('Brand added successfully.', false);
+	}
+
+	public function update_brand(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'picture' => 'required',
+		]);
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+		$BrandUpdate = Brand::where('id', $request->id)->first();
+		if (empty($BrandUpdate)) {
+			return $this->response('Brand not found', true);
+		}
+		if ($request->hasFile('picture')) {
+			if ($BrandUpdate->picture) {
+				unlink(public_path() . '/storage/brand/' . $BrandUpdate->picture);
+			}
+			$file = $request->file('picture');
+			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+			$path = public_path() . '/storage/brand/';
+			$file->move($path, $fileName);
+			$BrandUpdate->picture = $fileName;
+		}
+		$BrandUpdate->name = $request->name;
+		$BrandUpdate->save();
+		return $this->response('Brand updated successfully.', false);
+	}
+
+	public function delete_brand(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+		]);
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+		$Brand = Brand::where('id', $request->id)->first();
+		if (empty($Brand)) {
+			return $this->response('Brand not found', true);
+		}
+		if ($Brand->picture) {
+			unlink(public_path() . '/storage/brand/' . $Brand->picture);
+		}
+		$Brand->delete();
+		return $this->response('Brand deleted successfully.', false);
 	}
 }
