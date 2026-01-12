@@ -5293,7 +5293,7 @@ class AdminAPIController extends Controller
 	// Customers
 	public function GetUsers()
 	{
-		$userList = User::where('status', 1)->orderBy("id", "DESC")->paginate(100);
+		$userList = User::where('status', 1)->where('role', 0)->orderBy("id", "DESC")->paginate(100);
 		if (!empty($userList)) {
 			foreach ($userList as &$user) {
 				$user->bcc = (!empty($user->bcc)) ? explode(',', $user->bcc) : null;
@@ -6563,5 +6563,119 @@ class AdminAPIController extends Controller
 		}
 		$Brand->delete();
 		return $this->response('Brand deleted successfully.', false);
+	}
+
+
+	// Manage Users
+
+	public function manage_users()
+	{
+		$userList = User::where('status', 1)->where('role', '!=', 0)->orderBy("id", "DESC")->paginate(100);
+		if (!empty($userList)) {
+			return $this->response("", false, $userList);
+		} else {
+			return $this->response("Customer Not Found.", true);
+		}
+	}
+
+	public function manage_add_user(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'name' => 'required',
+			'last_name' => 'required',
+			'email' => 'required|email|unique:users',
+			'mobile' => 'required|unique:users',
+			'password' => 'required',
+			'role' => 'required',
+		], [
+			'name.required' => 'Please Enter Full Name',
+			'last_name.required' => 'Please Enter Last Name',
+			'email.required' => 'Please Enter Email ID',
+			'email.unique' => 'Email ID Already Exist',
+			'mobile.required' => 'Please Enter Mobile Number',
+			'mobile.unique' => 'Mobile Number Already Exist',
+			'password.required' => 'Please Enter Password',
+			'role.required' => 'Please Select Role',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$UserData = new User();
+		$UserData->name = $request->name;
+		$UserData->last_name = $request->last_name;
+		$UserData->email = $request->email;
+		$UserData->mobile = $request->mobile;
+		$UserData->password = Hash::make($request->password);
+		$UserData->visible_pass = $request->password;
+		$UserData->role = $request->role;
+		$UserData->save();
+
+		if (!empty($UserData)) {
+			return $this->response("Add New User Successfully!", false);
+		} else {
+			return $this->response("Error", true);
+		}
+	}
+
+	public function manage_update_user(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+			'name' => 'required',
+			'last_name' => 'required',
+			'mobile' => 'required|unique:users,mobile,' . $request->id,
+			'email' => 'required|email|unique:users,email,' . $request->id,
+			'role' => 'required',
+		], [
+			'id.required' => 'ID is Required',
+			'name.required' => 'Please Enter Full Name',
+			'last_name.required' => 'Please Enter Last Name',
+			'mobile.required' => 'Please Enter Mobile Number',
+			'email.required' => 'Please Enter Email ID',
+			'email.unique' => 'Email ID Already Exist',
+			'mobile.unique' => 'Mobile Number Already Exist',
+			'role.required' => 'Please Select Role',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$userData = User::where('id', $request->id)->first();
+		$userData->name = $request->name;
+		$userData->last_name = $request->last_name;
+		$userData->email = $request->email;
+		$userData->mobile = $request->mobile;
+		$userData->password = Hash::make($request->password);
+		$userData->visible_pass = $request->password;
+		$userData->role = $request->role;
+		$userData->save();
+		if (!empty($userData)) {
+			return $this->response("Edit User Successfully!", false);
+		} else {
+			return $this->response("Error", true);
+		}
+	}
+
+	public function manage_delete_user(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => 'required',
+		], [
+			'id.required' => 'ID is Required',
+		]);
+
+		if ($validator->fails()) {
+			return $this->response($validator->errors()->first(), true);
+		}
+
+		$userDelete = User::find($request->id)->delete();
+		if ($userDelete) {
+			return $this->response("User Delete Successfully!", false);
+		} else {
+			return $this->response("Error", true);
+		}
 	}
 }

@@ -162,7 +162,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('getpayment_settlement', [AdminAPIController::class, 'GetInvoicePaymentSettlement']);
 		Route::get('get_activity_log', [AdminAPIController::class, 'GetActivityLog']);
 
-		// Users
+		// Customer
 		Route::get('get_users', [AdminAPIController::class, 'GetUsers']);
 		Route::post('add_user', [AdminAPIController::class, 'AddUser']);
 		Route::post('edit_user', [AdminAPIController::class, 'EditUser']);
@@ -232,6 +232,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 		Route::post('update_brand', [AdminAPIController::class, 'update_brand']);
 		Route::post('delete_brand', [AdminAPIController::class, 'delete_brand']);
 		Route::get('get_brand/{id}', [AdminAPIController::class, 'get_brand']);
+
+		// Manage Users
+		Route::get('manage_users', [AdminAPIController::class, 'manage_users']);
+		Route::post('manage_add_user', [AdminAPIController::class, 'manage_add_user']);
+		Route::post('manage_update_user', [AdminAPIController::class, 'manage_update_user']);
+		Route::post('manage_delete_user', [AdminAPIController::class, 'manage_delete_user']);
 	});
 });
 

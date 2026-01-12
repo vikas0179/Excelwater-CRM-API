@@ -342,6 +342,7 @@ class UserAPIController extends Controller
 			'mobile' => $request->phone,
 			'password' => Hash::make($request->password),
 			'visible_pass' => $request->password,
+			'role' => 1,
 		]);
 
 		// Mail::to($request->email)->send(

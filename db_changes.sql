@@ -598,3 +598,6 @@ CREATE TABLE `brand` (
 );
 
 ALTER TABLE `product_master` ADD `brand_id` int NULL AFTER `id`;
+
+-- 12-01-2026
+ALTER TABLE `users` ADD `role` tinyint(3) NOT NULL DEFAULT '0' COMMENT '0=>Customer, 1=>Users, 2=>Dealer' AFTER `status`;
