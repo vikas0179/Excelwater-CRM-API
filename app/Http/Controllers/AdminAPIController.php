@@ -6587,6 +6587,7 @@ class AdminAPIController extends Controller
 			'mobile' => 'required|unique:users',
 			'password' => 'required',
 			'role' => 'required',
+			'discount_per' => 'required_if:role,2'
 		], [
 			'name.required' => 'Please Enter Full Name',
 			'last_name.required' => 'Please Enter Last Name',
@@ -6596,6 +6597,7 @@ class AdminAPIController extends Controller
 			'mobile.unique' => 'Mobile Number Already Exist',
 			'password.required' => 'Please Enter Password',
 			'role.required' => 'Please Select Role',
+			'discount_per.required_if' => 'Discount Percentage is required',
 		]);
 
 		if ($validator->fails()) {
@@ -6610,6 +6612,11 @@ class AdminAPIController extends Controller
 		$UserData->password = Hash::make($request->password);
 		$UserData->visible_pass = $request->password;
 		$UserData->role = $request->role;
+		if ($request->role == 2) {
+			$UserData->discount_per = $request->discount_per;
+		} else {
+			$UserData->discount_per = 0;
+		}
 		$UserData->save();
 
 		if (!empty($UserData)) {
@@ -6628,6 +6635,7 @@ class AdminAPIController extends Controller
 			'mobile' => 'required|unique:users,mobile,' . $request->id,
 			'email' => 'required|email|unique:users,email,' . $request->id,
 			'role' => 'required',
+			'discount_per' => 'required_if:role,2'
 		], [
 			'id.required' => 'ID is Required',
 			'name.required' => 'Please Enter Full Name',
@@ -6637,7 +6645,18 @@ class AdminAPIController extends Controller
 			'email.unique' => 'Email ID Already Exist',
 			'mobile.unique' => 'Mobile Number Already Exist',
 			'role.required' => 'Please Select Role',
+			'discount_per.required_if' => 'Discount Percentage is required',
 		]);
+
+		if ($request->role == 2) {
+			$validator->after(function ($validator) {
+				if (empty($validator->errors())) {
+					if (empty($validator->getData()['discount_per'])) {
+						$validator->errors()->add('discount_per', 'Discount Percentage is required');
+					}
+				}
+			});
+		}
 
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
@@ -6651,6 +6670,11 @@ class AdminAPIController extends Controller
 		$userData->password = Hash::make($request->password);
 		$userData->visible_pass = $request->password;
 		$userData->role = $request->role;
+		if ($request->role == 2) {
+			$userData->discount_per = $request->discount_per;
+		} else {
+			$userData->discount_per = 0;
+		}
 		$userData->save();
 		if (!empty($userData)) {
 			return $this->response("Edit User Successfully!", false);
