@@ -1186,7 +1186,6 @@ class UserAPIController extends Controller
 		}
 		/*********** GIFT CARD END *************/
 
-
 		$product_arr = [];
 		$sub_total = 0;
 		$grand_total = 0;
@@ -1261,10 +1260,16 @@ class UserAPIController extends Controller
 		}
 
 		$tax = Settings::where('id', 1)->first();
-
 		$total_tax = ($sub_total * $tax->value) / 100;
 
 		$arr = [];
+		$token = JWTAuth::getToken();
+		if ($token) {
+			$userData = JWTAuth::toUser($token);
+		} else {
+			$userData = null;
+		}
+		$arr["discount_percentage"] = isset($userData) && !empty($userData->discount_per) ? $userData->discount_per : 0;
 		$arr["sub_total"] = number_format($sub_total, 2);
 		$arr["total_tax"] = number_format($total_tax, 2);
 		$arr["tax_percent"] = $tax->value;
