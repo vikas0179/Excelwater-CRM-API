@@ -46,7 +46,11 @@ use App\Mail\GiftCardOTPMail;
 use App\Mail\GiftCardReceiverMail;
 use App\Mail\RegisterUserMail;
 use App\Mail\PartnerWithUsMail;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\ProductMaster;
+use App\Models\ProductStock;
+use App\Models\Transaction;
 use PDF;
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
@@ -1720,6 +1724,7 @@ class UserAPIController extends Controller
 			'discount_code' => $discount_code,
 			'currency_symbol' => $this->_currency_symbol(),
 			'paid_by' => $request->payment_gateway,
+			'dealer_discount' => isset($request->dealer_discount) ? $request->dealer_discount : 0,
 		]);
 
 		foreach ($order_items as $index => $val) {
@@ -1766,8 +1771,75 @@ class UserAPIController extends Controller
 		}
 
 		$order = Orders::where('id', $order->id)->first();
+		$orderitemslist = OrderItems::where('order_id', $order->id)->get();
 		$user = User::where("id", $user->id)->first();
 		$admin = Admin::where("id", 1)->first();
+
+		// Start Invoice
+		$BillAddress = null;
+		$ShipAddress = null;
+		if (!empty($order->billing_id)) {
+			$BillAddress = Addresses::where('id', $order->billing_id)->select('address')->first();
+		}
+		if (!empty($order->shipping_id)) {
+			$ShipAddress = Addresses::where('id', $order->shipping_id)->select('address')->first();
+		}
+		$InvoiceNo = $this->CheckInvoiceNo();
+		$InvoiceStore = new Invoice();
+		$InvoiceStore->created_at = now();
+		$InvoiceStore->updated_at = now();
+		$InvoiceStore->customer_id = isset($order->user_id) && !empty($order->user_id) ? $order->user_id : null;
+		$InvoiceStore->bill_to = isset($BillAddress) && !empty($BillAddress) ? $BillAddress->address : '';
+		$InvoiceStore->ship_to = isset($ShipAddress) && !empty($ShipAddress) ? $ShipAddress->address : '';
+		$InvoiceStore->invoice_no = isset($InvoiceNo) && !empty($InvoiceNo) ? $InvoiceNo['invoice_no'] : '';
+		$InvoiceStore->invoice_date = date("Y-m-d");
+		$InvoiceStore->desc = null;
+		$InvoiceStore->image = null;
+		$InvoiceStore->sub_total = isset($order->total_amount) && !empty($order->total_amount) ? $order->total_amount : 0;
+		$InvoiceStore->total_amount = isset($order->total_amount) && !empty($order->total_amount) ? $order->total_amount : 0;
+		$InvoiceStore->remaining_amount = 0;
+		$InvoiceStore->transaction_type = 1;
+		$InvoiceStore->invoice_type = 1;
+		$InvoiceStore->tax_amount = isset($order->tax_amount) && !empty($order->tax_amount) ? $order->tax_amount : 0;
+		$InvoiceStore->save();
+
+		$TransactionStore = new Transaction();
+		$TransactionStore->customer_id = isset($order->user_id) && !empty($order->user_id) ? $order->user_id : null;
+		$TransactionStore->invoice_id = $InvoiceStore->id;
+		$TransactionStore->date = date("Y-m-d");
+		$TransactionStore->type = "Online";
+		$TransactionStore->desc = null;
+		$TransactionStore->amount = isset($order->total_amount) && !empty($order->total_amount) ? $order->total_amount : 0;
+		$TransactionStore->status = 1;
+		$TransactionStore->created_at = now();
+		$TransactionStore->updated_at = now();
+		$TransactionStore->save();
+
+		foreach ($orderitemslist as $item) {
+			$ProductStock = new ProductStock();
+			$ProductStock->product_id = $item->product_id;
+			$ProductStock->product_code = $this->exit_product_stock_code();
+			$ProductStock->qty = 1;
+			$ProductStock->status = 1;
+			$ProductStock->save();
+			// Item Data
+			$InvoiceItems = new InvoiceItem();
+			$rate = isset($item->base_amount) && !empty($item->base_amount) ? $item->base_amount : 0;
+			$qty = isset($item->quantity) && !empty($item->quantity) ? $item->quantity : 0;
+			$InvoiceItems->created_at = now();
+			$InvoiceItems->updated_at = now();
+			$InvoiceItems->invoice_id = $InvoiceStore->id;
+			$InvoiceItems->product_id = $item->product_id;
+			$InvoiceItems->product_stock_id = $ProductStock->id;
+			$InvoiceItems->item = isset($item->product_name) && !empty($item->product_name) ? $item->product_name : '';
+			$InvoiceItems->desc = null;
+			$InvoiceItems->qty = $qty;
+			$InvoiceItems->rate = $rate;
+			$InvoiceItems->amount = $rate * $qty;
+			$InvoiceItems->save();
+		}
+		// End Invoice
+
 
 		if ($request->payment_gateway == 0) {
 			\Stripe\Stripe::setApiKey(getenv("STRIPE_SECRET_KEY"));
@@ -2443,5 +2515,29 @@ class UserAPIController extends Controller
 			"exception" => $message,
 			"payload" => json_encode($req)
 		));
+	}
+
+	public function CheckInvoiceNo()
+	{
+		$LastRecordCheck = Invoice::whereDate('created_at', date('Y-m-d'))->orderBy("id", "DESC")->first();
+		if (empty($LastRecordCheck)) {
+			$GenerateInvoiceNumber = date("dmY") . "1";
+		} else {
+			$orderNumber = substr($LastRecordCheck->invoice_no, 8);
+			$IncreseInvoiceNumber = str_pad(((int)$orderNumber + 1), strlen($orderNumber), '0', STR_PAD_LEFT);
+			$GenerateInvoiceNumber = date("dmY") . $IncreseInvoiceNumber;
+		}
+		$data = array('invoice_no' => $GenerateInvoiceNumber);
+		return $data;
+	}
+
+	public function exit_product_stock_code()
+	{
+		$code = 'PSC' . str_pad(random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+		$ExitProductStock = ProductStock::where('product_code', $code)->first();
+		if (!empty($ExitProductStock)) {
+			$code = $this->exit_product_stock_code();
+		}
+		return $code;
 	}
 }

@@ -28,6 +28,7 @@ class Orders extends Model
 		'discount_code_id',
 		'discount_type',
 		'pay_remarks',
-		'currency_symbol'
+		'currency_symbol',
+		'dealer_discount',
     ];
 } 

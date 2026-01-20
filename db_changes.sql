@@ -603,3 +603,10 @@ ALTER TABLE `product_master` ADD `brand_id` int NULL AFTER `id`;
 ALTER TABLE `users` ADD `role` tinyint(3) NOT NULL DEFAULT '0' COMMENT '0=>Customer, 1=>Users, 2=>Dealer' AFTER `status`;
 
 ALTER TABLE `users` ADD `discount_per` int NULL AFTER `role`;
+
+-- 20-01-2026
+ALTER TABLE `invoice` ADD `invoice_type` tinyint(2) NOT NULL DEFAULT '0' COMMENT '1=>Front, 0=>Backend';
+
+ALTER TABLE `invoice` ADD `tax_amount` double NOT NULL DEFAULT '0';
+
+ALTER TABLE `orders` ADD `dealer_discount` double NOT NULL DEFAULT '0' AFTER `total_amount`;
