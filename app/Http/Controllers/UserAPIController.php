@@ -1410,6 +1410,39 @@ class UserAPIController extends Controller
 		return $currency_symbol;
 	}
 
+	/**
+	 * Get a valid Stripe Customer ID for the given user.
+	 * If the stored ID is invalid (deleted/wrong account), creates a new customer.
+	 */
+	private function _get_valid_stripe_customer_id($user)
+	{
+		$customer_id = $user->stripe_customer_id;
+
+		if (!empty($customer_id)) {
+			try {
+				// Verify customer exists in Stripe
+				\Stripe\Customer::retrieve($customer_id);
+				return $customer_id;
+			} catch (\Stripe\Exception\InvalidRequestException $e) {
+				// Customer doesn't exist, will create a new one below
+			}
+		}
+
+		// Create new Stripe customer
+		$customer = \Stripe\Customer::create([
+			"name" => "{$user->name} {$user->last_name}",
+			"email" => "{$user->email}"
+		]);
+		$customer = json_decode(json_encode($customer), true);
+		$customer_id = $customer["id"];
+
+		// Update user record
+		$user->stripe_customer_id = $customer_id;
+		$user->save();
+
+		return $customer_id;
+	}
+
 	public function place_order(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
@@ -1843,15 +1876,7 @@ class UserAPIController extends Controller
 
 		if ($request->payment_gateway == 0) {
 			\Stripe\Stripe::setApiKey(getenv("STRIPE_SECRET_KEY"));
-			if (empty($user->stripe_customer_id)) {
-				$customer = \Stripe\Customer::create(["name" => "{$user->first_name} {$user->last_name}", "email" => "{$user->email}"]);
-				$customer = json_decode(json_encode($customer), true);
-				$customer_id = $customer["id"];
-				$user->stripe_customer_id = $customer_id;
-				$user->save();
-			} else {
-				$customer_id = $user->stripe_customer_id;
-			}
+			$customer_id = $this->_get_valid_stripe_customer_id($user);
 
 			try {
 				$description = array_column($order_items, "product_name");
@@ -2202,16 +2227,7 @@ class UserAPIController extends Controller
 		));
 
 		\Stripe\Stripe::setApiKey(getenv("STRIPE_SECRET_KEY"));
-
-		if (empty($user->stripe_customer_id)) {
-			$customer = \Stripe\Customer::create(["name" => "{$user->first_name} {$user->last_name}", "email" => "{$user->email}"]);
-			$customer = json_decode(json_encode($customer), true);
-			$customer_id = $customer["id"];
-			$user->stripe_customer_id = $customer_id;
-			$user->save();
-		} else {
-			$customer_id = $user->stripe_customer_id;
-		}
+		$customer_id = $this->_get_valid_stripe_customer_id($user);
 
 		try {
 			$description = "Gift Card of {$gift_card->amount}";
