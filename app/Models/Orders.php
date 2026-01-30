@@ -30,5 +30,6 @@ class Orders extends Model
 		'pay_remarks',
 		'currency_symbol',
 		'dealer_discount',
+		'hst_tax',
     ];
 } 

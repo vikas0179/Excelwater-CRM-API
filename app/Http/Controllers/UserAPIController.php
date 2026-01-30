@@ -36,6 +36,7 @@ use App\Models\DiscountHistory;
 use App\Models\CountryCheckerModal;
 use App\Models\Banners;
 use App\Models\ProductResources;
+use App\Models\Brand;
 use DB;
 use Mail;
 use Stripe;
@@ -743,6 +744,17 @@ class UserAPIController extends Controller
 			});
 		}
 
+		if ($request->filled('brand')) {
+			$products->where(function ($qry) use ($request) {
+				if ($request->brand === "all") {
+					$qry->whereNotNull('product_master.brand_id')
+						->orWhere('product_master.brand_id', '!=', 0);
+				} else {
+					$qry->where('product_master.brand_id', $request->brand);
+				}
+			});
+		}
+
 		if ($request->has('color_id') && $request->has('size_id')) {
 			$arr = [];
 			$variations_set = "IF(type=0, '', (SELECT GROUP_CONCAT(pvi.item_id) FROM products_variations_items AS pvi WHERE pvi.product_id=products.id) )";
@@ -910,6 +922,9 @@ class UserAPIController extends Controller
 
 		$product->image = !empty($product->image) ? asset('storage/product_master/' . $product->image) : '';
 		$product->quantity = 1;
+
+		$stock_qty = ProductStock::where('status', 0)->where('product_id', $product->product_master_id)->select(DB::raw("COUNT(id) as total_qty"))->first();
+		$product->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
 
 		$product_img_arr = [];
 		if ($product->image) {
@@ -1219,6 +1234,9 @@ class UserAPIController extends Controller
 				continue;
 			}
 
+			$stock_qty = ProductStock::where('status', 0)->where('product_id', $product->product_master_id)->select(DB::raw("COUNT(id) as total_qty"))->first();
+			$product->stock_qty = isset($stock_qty->total_qty) ? $stock_qty->total_qty : 0;
+
 			$cate_arr = [];
 
 			$category_name = Category::select("name")->where("id", $product->category)->pluck("name")->first() ?? "";
@@ -1340,9 +1358,38 @@ class UserAPIController extends Controller
 		}
 		$page_about_us = array("name" => "About Us", "id" => -1, "next_tab" => false, "slug" => "/about-us", "sub" => []);
 		$page_contact_us = array("name" => "Contact Us", "id" => -1, "next_tab" => false, "slug" => "/contact-us", "sub" => []);
-		$page_partner_with_us = array("name" => "Partner with Us", "id" => -1, "next_tab" => false, "slug" => "/partner-with-us", "sub" => []);
-		$page_water_tips_and_resources = array("name" => "Water Tips and Resources", "id" => -1, "next_tab" => true, "slug" => "https://excelwater.ca/blog", "sub" => []);
+
+		$brands = Brand::where("status", 1)->get()->toArray();
+		$bmenu = [];
+		foreach ($brands as $brand) {
+			$bmenu[] = array(
+				"name" => $brand["name"],
+				"id" => $brand['id'],
+				"next_tab" => false,
+				"slug" => "{$brand['slug']}",
+				"sub" => [],
+			);
+		}
+		$brands = array(
+			"name" => "Brands",
+			"id" => -1,
+			"next_tab" => false,
+			"slug" => "/brands/all",
+			"sub" => $bmenu,
+		);
+		$header_menu[] = $brands;
+
+		$page_partner_with_us =
+			array(
+				"name" => "Partner with Us",
+				"id" => -1,
+				"next_tab" => false,
+				"slug" => "/partner-with-us",
+				"sub" => []
+			);
 		$header_menu[] = $page_partner_with_us;
+
+		$page_water_tips_and_resources = array("name" => "Water Tips and Resources", "id" => -1, "next_tab" => true, "slug" => "https://excelwater.ca/blog", "sub" => []);
 		$footer_menu = [];
 		$site_links = [];
 		$site_links[] = $page_about_us;
@@ -1758,6 +1805,7 @@ class UserAPIController extends Controller
 			'currency_symbol' => $this->_currency_symbol(),
 			'paid_by' => $request->payment_gateway,
 			'dealer_discount' => isset($request->dealer_discount) ? $request->dealer_discount : 0,
+			'hst_tax' => isset($request->hst_tax) ? $request->hst_tax : 0,
 		]);
 
 		foreach ($order_items as $index => $val) {
@@ -1891,6 +1939,13 @@ class UserAPIController extends Controller
 						"cust_id" => $user->id,
 						"order_id" => $order->id,
 						"payment_for" => "ORD"
+					],
+					'shipping' => [
+						'name' => "{$user->first_name} {$user->last_name}",
+						'address' => [
+							'line1' => 'Surat',
+							'country' => 'IN',
+						]
 					],
 				]);
 

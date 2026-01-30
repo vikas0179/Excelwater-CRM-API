@@ -4125,9 +4125,50 @@ class AdminAPIController extends Controller
 		}
 
 		if (ProductMaster::find($request->id)) {
-			DB::table('product_master')->where('id', $request->id)->delete();
-			Products::where('product_master_id', $request->id)->delete();
-			ProductResources::where('product_id', $request->id)->delete();
+			$getproductsdata = Products::where('product_master_id', $request->id)->first();
+			if (!empty($getproductsdata)) {
+				if (!empty($getproductsdata->image_galley)) {
+					$images = trim($getproductsdata->image_galley, ", ");
+					$image_galley = explode(",", $images);
+					foreach ($image_galley as $key => $value) {
+						if (!empty($value)) {
+							$path = public_path('/storage/product_master/product_gallery/' . $value);
+							if (File::exists($path)) {
+								File::delete($path);
+							}
+						}
+					}
+				}
+				$getproductsdata->delete();
+			}
+
+			$getProductMasterData = ProductMaster::where('id', $request->id)->first();
+			if (!empty($getProductMasterData)) {
+				if (!empty($getProductMasterData->image)) {
+					$path = public_path('/storage/product_master/' . $getProductMasterData->image);
+					if (File::exists($path)) {
+						File::delete($path);
+					}
+				}
+				$getProductMasterData->delete();
+			}
+
+			$getProductResourcesData = ProductResources::where('product_id', $request->id)->get();
+			if (!empty($getProductResourcesData)) {
+				foreach ($getProductResourcesData as $key => $value) {
+					if (!empty($value->filename)) {
+						$path = public_path('/storage/product_master/resources/' . $value->filename);
+						if (File::exists($path)) {
+							File::delete($path);
+						}
+					}
+					$value->delete();
+				}
+			}
+
+			// DB::table('product_master')->where('id', $request->id)->delete();
+			// Products::where('product_master_id', $request->id)->delete();
+			// ProductResources::where('product_id', $request->id)->delete();
 			ProductsSelectedAttributes::where('product_id', $request->id)->delete();
 			ProductsVariations::where('product_id', $request->id)->delete();
 			ProductsVariationsItems::where('product_id', $request->id)->delete();
@@ -5896,7 +5937,8 @@ class AdminAPIController extends Controller
 	// Start Category
 	public function manage_category(Request $request)
 	{
-		$category = Category::select('*', DB::raw("CASE WHEN image IS NOT NULL THEN CONCAT('" . asset('storage/category') . "/', image) ELSE '' END as image"), DB::raw("CASE WHEN status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"))
+		// DB::raw("CASE WHEN image IS NOT NULL THEN CONCAT('" . asset('storage/category') . "/', image) ELSE '' END as image"),
+		$category = Category::select('*', DB::raw("CASE WHEN status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"))
 			->when($request->search, function ($q, $search) {
 				$q->where(function ($q) use ($search) {
 					$q->where('name', 'LIKE', "%{$search}%")
@@ -5915,7 +5957,7 @@ class AdminAPIController extends Controller
 			return $this->response('Category not found', true);
 		}
 		$data->status_label = $data->status == 1 ? 'Publish' : 'Draft';
-		$data->image = !empty($data->image) ? asset('storage/category/' . $data->image) : '';
+		// $data->image = !empty($data->image) ? asset('storage/category/' . $data->image) : '';
 		return $this->response('Category Detail', false, $data);
 	}
 
@@ -5924,31 +5966,31 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'name' => 'required',
 			'slug' => 'required|unique:categories,slug',
-			'image' => 'required',
+			// 'image' => 'required',
 		], [
 			'name.required' => 'Please enter name',
 			'slug.required' => 'Please enter slug',
 			'slug.unique' => 'Entered slug is already in used!',
-			'image.required' => 'Please select image',
+			// 'image.required' => 'Please select image',
 		]);
 
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		$fileName = null;
-		if ($request->hasFile('image')) {
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/category/';
-			$file->move($path, $fileName);
-		}
+		// $fileName = null;
+		// if ($request->hasFile('image')) {
+		// 	$file = $request->file('image');
+		// 	$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+		// 	$path = public_path() . '/storage/category/';
+		// 	$file->move($path, $fileName);
+		// }
 
 		Category::create([
 			'name' => isset($request->name) ? $request->name : '',
 			'slug' => isset($request->slug) ? $request->slug : '',
 			'status' => isset($request->status) ? $request->status : 0,
-			'image' => isset($fileName) ? $fileName : null,
+			'image' => null,
 		]);
 		return $this->response('Category add successfully.', false);
 	}
@@ -5979,20 +6021,22 @@ class AdminAPIController extends Controller
 		$category->name = isset($request->name) ? $request->name : '';
 		$category->status = isset($request->status) ? $request->status : 0;
 		$category->slug = isset($request->slug) ? $request->slug : '';
-		if ($request->hasFile('image')) {
-			if (!empty($category->image)) {
-				$oldImage = $category->image;
-				$path = public_path('/storage/category/' . $oldImage);
-				if (File::exists($path)) {
-					File::delete($path);
-				}
-			}
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/category/';
-			$file->move($path, $fileName);
-			$category->image = $fileName;
-		}
+
+		// if ($request->hasFile('image')) {
+		// 	if (!empty($category->image)) {
+		// 		$oldImage = $category->image;
+		// 		$path = public_path('/storage/category/' . $oldImage);
+		// 		if (File::exists($path)) {
+		// 			File::delete($path);
+		// 		}
+		// 	}
+		// 	$file = $request->file('image');
+		// 	$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+		// 	$path = public_path() . '/storage/category/';
+		// 	$file->move($path, $fileName);
+		// 	$category->image = $fileName;
+		// }
+
 		$category->save();
 		return $this->response('Category updated successfully.', false);
 	}
@@ -6003,12 +6047,14 @@ class AdminAPIController extends Controller
 		if (empty($category)) {
 			return $this->response('Category not found', true);
 		}
-		if (!empty($category->image)) {
-			$path = public_path('/storage/category/' . $category->image);
-			if (File::exists($path)) {
-				File::delete($path);
-			}
-		}
+
+		// if (!empty($category->image)) {
+		// 	$path = public_path('/storage/category/' . $category->image);
+		// 	if (File::exists($path)) {
+		// 		File::delete($path);
+		// 	}
+		// }
+
 		$category->delete();
 		return $this->response('Category deleted successfully.', false);
 	}
@@ -6017,7 +6063,12 @@ class AdminAPIController extends Controller
 	public function manage_sub_category(Request $request)
 	{
 		$subCategory = SubCategory::join('categories', 'sub_category.c_id', '=', 'categories.id')
-			->select('sub_category.*', 'categories.name as category_name', DB::raw("CASE WHEN sub_category.image IS NOT NULL THEN CONCAT('" . asset('storage/sub_category') . "/', sub_category.image) ELSE '' END as image"), DB::raw("CASE WHEN sub_category.status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"))
+			->select(
+				'sub_category.*',
+				'categories.name as category_name',
+				// DB::raw("CASE WHEN sub_category.image IS NOT NULL THEN CONCAT('" . asset('storage/sub_category') . "/', sub_category.image) ELSE '' END as image"),
+				DB::raw("CASE WHEN sub_category.status = 1 THEN 'Publish' ELSE 'Draft' END as status_label")
+			)
 			->when($request->search, function ($q, $search) {
 				$q->where(function ($q) use ($search) {
 					$q->where('sub_category.name', 'LIKE', "%{$search}%")
@@ -6035,8 +6086,8 @@ class AdminAPIController extends Controller
 			->select(
 				'sub_category.*',
 				'categories.name as category_name',
-				DB::raw("CASE WHEN sub_category.status = 1 THEN 'Publish' ELSE 'Draft' END as status_label"),
-				DB::raw("CASE WHEN sub_category.image IS NOT NULL THEN CONCAT('" . asset('storage/sub_category') . "/', sub_category.image) ELSE '' END as image"),
+				DB::raw("CASE WHEN sub_category.status = 1 THEN 'Publish' ELSE 'Draft' END as status_label")
+				// ,DB::raw("CASE WHEN sub_category.image IS NOT NULL THEN CONCAT('" . asset('storage/sub_category') . "/', sub_category.image) ELSE '' END as image"),
 			)
 			->where('sub_category.id', $request->id)
 			->first();
@@ -6051,13 +6102,13 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'name' => 'required',
 			'slug' => 'required|unique:sub_category,slug',
-			'image' => 'required',
+			// 'image' => 'required',
 			'c_id' => 'required',
 		], [
 			'name.required' => 'Please enter name',
 			'slug.required' => 'Please enter slug',
 			'slug.unique' => 'Entered slug is already in used!',
-			'image.required' => 'Please select image',
+			// 'image.required' => 'Please select image',
 			'c_id.required' => 'Please select category',
 		]);
 
@@ -6065,19 +6116,19 @@ class AdminAPIController extends Controller
 			return $this->response($validator->errors()->first(), true);
 		}
 
-		$fileName = null;
-		if ($request->hasFile('image')) {
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/sub_category/';
-			$file->move($path, $fileName);
-		}
+		// $fileName = null;
+		// if ($request->hasFile('image')) {
+		// 	$file = $request->file('image');
+		// 	$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+		// 	$path = public_path() . '/storage/sub_category/';
+		// 	$file->move($path, $fileName);
+		// }
 
 		SubCategory::create([
 			'name' => isset($request->name) ? $request->name : '',
 			'slug' => isset($request->slug) ? $request->slug : '',
 			'status' => isset($request->status) ? $request->status : 0,
-			'image' => isset($fileName) ? $fileName : null,
+			'image' => null,
 			'c_id' => isset($request->c_id) ? $request->c_id : null,
 		]);
 		return $this->response('Sub Category add successfully.', false);
@@ -6107,19 +6158,19 @@ class AdminAPIController extends Controller
 			return $this->response('Sub Category not found', true);
 		}
 
-		if ($request->hasFile('image')) {
-			$file = $request->file('image');
-			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/sub_category/';
-			$file->move($path, $fileName);
-			if (!empty($subCategory->image)) {
-				$path = public_path('/storage/sub_category/' . $subCategory->image);
-				if (File::exists($path)) {
-					File::delete($path);
-				}
-			}
-			$subCategory->image = $fileName;
-		}
+		// if ($request->hasFile('image')) {
+		// 	$file = $request->file('image');
+		// 	$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+		// 	$path = public_path() . '/storage/sub_category/';
+		// 	$file->move($path, $fileName);
+		// 	if (!empty($subCategory->image)) {
+		// 		$path = public_path('/storage/sub_category/' . $subCategory->image);
+		// 		if (File::exists($path)) {
+		// 			File::delete($path);
+		// 		}
+		// 	}
+		// 	$subCategory->image = $fileName;
+		// }
 
 		$subCategory->name = isset($request->name) ? $request->name : null;
 		$subCategory->slug = isset($request->slug) ? $request->slug : null;
@@ -6135,12 +6186,12 @@ class AdminAPIController extends Controller
 		if (empty($subCategory)) {
 			return $this->response('Sub Category not found', true);
 		}
-		if (!empty($subCategory->image)) {
-			$path = public_path('/storage/sub_category/' . $subCategory->image);
-			if (File::exists($path)) {
-				File::delete($path);
-			}
-		}
+		// if (!empty($subCategory->image)) {
+		// 	$path = public_path('/storage/sub_category/' . $subCategory->image);
+		// 	if (File::exists($path)) {
+		// 		File::delete($path);
+		// 	}
+		// }
 		$subCategory->delete();
 		return $this->response('Sub Category deleted successfully.', false);
 	}
@@ -6150,16 +6201,16 @@ class AdminAPIController extends Controller
 	{
 		$productAttribute = ProductAttributes::when($request->search, function ($q, $search) {
 			$q->where(function ($q) use ($search) {
-				$q->where('name', 'LIKE', "%{$search}%")
-					->orWhere('slug', 'LIKE', "%{$search}%");
+				$q->where('name', 'LIKE', "%{$search}%");
+				// ->orWhere('slug', 'LIKE', "%{$search}%");
 			});
 		})
 			->where('type', 0)
 			->select(
 				'id',
 				'name',
-				'slug',
-				'description',
+				// 'slug',
+				// 'description',
 				'created_at',
 				'updated_at',
 				DB::raw("(SELECT COUNT(*) FROM product_attributes pa WHERE pa.parent_id = product_attributes.id) AS total_item")
@@ -6174,8 +6225,8 @@ class AdminAPIController extends Controller
 			->select(
 				'id',
 				"name",
-				"slug",
-				"description",
+				// "slug",
+				// "description",
 				"created_at",
 				"updated_at",
 				DB::raw("(SELECT COUNT(*) FROM product_attributes pa WHERE pa.parent_id = product_attributes.id) AS total_item")
@@ -6189,7 +6240,7 @@ class AdminAPIController extends Controller
 	public function get_product_attribute(Request $request)
 	{
 		$productAttribute = ProductAttributes::where('type', 1)
-			->select('id', "name", "slug", "description", "created_at", "updated_at")
+			->select('id', "name", /*"slug", "description",*/ "created_at", "updated_at")
 			->where('parent_id', $request->id)
 			->get();
 		if (empty($productAttribute)) {
@@ -6202,13 +6253,13 @@ class AdminAPIController extends Controller
 	{
 		$validator = Validator::make($request->all(), [
 			'name' => 'required',
-			'slug' => 'required|unique:product_attributes,slug',
-			'description' => 'required',
+			// 'slug' => 'required|unique:product_attributes,slug',
+			// 'description' => 'required',
 		], [
 			'name.required' => 'Please enter name',
-			'slug.required' => 'Please enter slug',
-			'slug.unique' => 'Entered slug is already in used!',
-			'description.required' => 'Please enter description',
+			// 'slug.required' => 'Please enter slug',
+			// 'slug.unique' => 'Entered slug is already in used!',
+			// 'description.required' => 'Please enter description',
 		]);
 
 		if ($validator->fails()) {
@@ -6217,8 +6268,8 @@ class AdminAPIController extends Controller
 
 		ProductAttributes::create([
 			'name' => isset($request->name) ? $request->name : null,
-			'slug' => isset($request->slug) ? $request->slug : null,
-			'description' => isset($request->description) ? $request->description : null,
+			// 'slug' => isset($request->slug) ? $request->slug : null,
+			// 'description' => isset($request->description) ? $request->description : null,
 			'type' => 0,
 		]);
 		return $this->response('Product Attribute add successfully.', false);
@@ -6229,14 +6280,14 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'id' => 'required',
 			'name' => 'required',
-			'slug' => 'required|unique:product_attributes,slug,' . $request->id,
-			'description' => 'required',
+			// 'slug' => 'required|unique:product_attributes,slug,' . $request->id,
+			// 'description' => 'required',
 		], [
 			'id.required' => 'Required parameters missing',
 			'name.required' => 'Please enter name',
-			'slug.required' => 'Please enter slug',
-			'slug.unique' => 'Entered slug is already in used!',
-			'description.required' => 'Please enter description',
+			// 'slug.required' => 'Please enter slug',
+			// 'slug.unique' => 'Entered slug is already in used!',
+			// 'description.required' => 'Please enter description',
 		]);
 
 		if ($validator->fails()) {
@@ -6249,8 +6300,8 @@ class AdminAPIController extends Controller
 		}
 
 		$productAttribute->name = isset($request->name) ? $request->name : null;
-		$productAttribute->slug = isset($request->slug) ? $request->slug : null;
-		$productAttribute->description = isset($request->description) ? $request->description : null;
+		// $productAttribute->slug = isset($request->slug) ? $request->slug : null;
+		// $productAttribute->description = isset($request->description) ? $request->description : null;
 		$productAttribute->save();
 		return $this->response('Product Attribute updated successfully.', false);
 	}
@@ -6273,13 +6324,13 @@ class AdminAPIController extends Controller
 		}
 		$productItem = ProductAttributes::when($request->search, function ($q, $search) {
 			$q->where(function ($q) use ($search) {
-				$q->where('product_attributes.name', 'LIKE', "%{$search}%")
-					->orWhere('product_attributes.slug', 'LIKE', "%{$search}%");
+				$q->where('product_attributes.name', 'LIKE', "%{$search}%");
+				// ->orWhere('product_attributes.slug', 'LIKE', "%{$search}%");
 			});
 		})
 			->where('type', 1)
 			->where('parent_id', $request->parent_id)
-			->select('id', "name", "slug", "description", "created_at", "updated_at")->paginate(10);
+			->select('id', "name", /*"slug", "description",*/ "created_at", "updated_at")->paginate(10);
 		return $this->response('Product Item List', false, $productItem);
 	}
 
@@ -6287,14 +6338,14 @@ class AdminAPIController extends Controller
 	{
 		$validator = Validator::make($request->all(), [
 			'name' => 'required',
-			'slug' => 'required|unique:product_attributes,slug',
-			'description' => 'required',
+			// 'slug' => 'required|unique:product_attributes,slug',
+			// 'description' => 'required',
 			'parent_id' => 'required',
 		], [
 			'name.required' => 'Please enter name',
-			'slug.required' => 'Please enter slug',
-			'slug.unique' => 'Entered slug is already in used!',
-			'description.required' => 'Please enter description',
+			// 'slug.required' => 'Please enter slug',
+			// 'slug.unique' => 'Entered slug is already in used!',
+			// 'description.required' => 'Please enter description',
 			'parent_id.required' => 'Please enter parent id',
 		]);
 
@@ -6314,8 +6365,8 @@ class AdminAPIController extends Controller
 
 		ProductAttributes::create([
 			'name' => isset($request->name) ? $request->name : null,
-			'slug' => isset($request->slug) ? $request->slug : null,
-			'description' => isset($request->description) ? $request->description : null,
+			// 'slug' => isset($request->slug) ? $request->slug : null,
+			// 'description' => isset($request->description) ? $request->description : null,
 			'parent_id' => isset($request->parent_id) ? $request->parent_id : 0,
 			'type' => 1,
 			'is_color' => isset($request->is_color) ? $request->is_color : 0,
@@ -6329,15 +6380,15 @@ class AdminAPIController extends Controller
 		$validator = Validator::make($request->all(), [
 			'id' => 'required',
 			'name' => 'required',
-			'slug' => 'required|unique:product_attributes,slug,' . $request->id,
-			'description' => 'required',
+			// 'slug' => 'required|unique:product_attributes,slug,' . $request->id,
+			// 'description' => 'required',
 			'parent_id' => 'required',
 		], [
 			'id.required' => 'Required parameters missing',
 			'name.required' => 'Please enter name',
-			'slug.required' => 'Please enter slug',
-			'slug.unique' => 'Entered slug is already in used!',
-			'description.required' => 'Please enter description',
+			// 'slug.required' => 'Please enter slug',
+			// 'slug.unique' => 'Entered slug is already in used!',
+			// 'description.required' => 'Please enter description',
 			'parent_id.required' => 'Please enter parent id',
 		]);
 
@@ -6355,8 +6406,8 @@ class AdminAPIController extends Controller
 		}
 
 		$productItem->name = isset($request->name) ? $request->name : null;
-		$productItem->slug = isset($request->slug) ? $request->slug : null;
-		$productItem->description = isset($request->description) ? $request->description : null;
+		// $productItem->slug = isset($request->slug) ? $request->slug : null;
+		// $productItem->description = isset($request->description) ? $request->description : null;
 		$productItem->parent_id = isset($request->parent_id) ? $request->parent_id : 0;
 		$productItem->type = 1;
 		$productItem->is_color = isset($request->is_color) ? $request->is_color : 0;
@@ -6384,8 +6435,8 @@ class AdminAPIController extends Controller
 	{
 		$search = isset($request->search) ? $request->search : '';
 
-		$productReview = ProductReviews::join("products", function ($join) {
-			$join->on("product_reviews.product_id", "=", "products.id");
+		$productReview = ProductReviews::join("product_master", function ($join) {
+			$join->on("product_reviews.product_id", "=", "product_master.id");
 		})
 			->join("users", function ($join) {
 				$join->on("product_reviews.user_id", "=", "users.id");
@@ -6394,10 +6445,10 @@ class AdminAPIController extends Controller
 				$q->where(function ($q) use ($search) {
 					$q->where('product_reviews.title', 'LIKE', "%{$search}%")
 						->orWhere('product_reviews.name', 'LIKE', "%{$search}%")
-						->orWhere('products.title', 'LIKE', "%{$search}%");
+						->orWhere('product_master.product_name', 'LIKE', "%{$search}%");
 				});
 			})
-			->select("product_reviews.*", "products.title as product_name", "users.name as user_name", "users.email as user_email", "users.mobile as user_mobile")
+			->select("product_reviews.*", "product_master.product_name", "users.name as user_name", "users.email as user_email", "users.mobile as user_mobile")
 			->paginate(10);
 		return $this->response('Product Review List', false, $productReview);
 	}
@@ -6492,59 +6543,89 @@ class AdminAPIController extends Controller
 	public function get_brands()
 	{
 		$brands = Brand::select('brand.*',  DB::raw("CASE WHEN brand.picture IS NOT NULL THEN CONCAT('" . asset('storage/brand') . "/', brand.picture) ELSE '' END as picture"))->paginate(10);
-		return $this->response('Brands', false, $brands);
+		return $this->response('Brand', false, $brands);
 	}
 
 	public function add_brand(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
-			'name' => 'required',
+			'name' => 'required|unique:brand,name',
 			'picture' => 'required',
 		]);
+
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
 		}
+
 		$BrandStore = new Brand();
+
 		if ($request->hasFile('picture')) {
 			$file = $request->file('picture');
 			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/brand/';
+			$path = public_path('storage/brand');
+			if (!file_exists($path)) {
+				mkdir($path, 0777, true);
+			}
 			$file->move($path, $fileName);
 			$BrandStore->picture = $fileName;
 		}
+
 		$BrandStore->name = $request->name;
+		$slug = Str::slug($request->name);
+		$ExitSlug = Brand::where('slug', $slug)->first();
+		if (!empty($ExitSlug)) {
+			$slug = Str::slug($request->name . '-' . rand(1000, 9999));
+		}
+		$BrandStore->slug = $slug;
 		$BrandStore->save();
+
 		return $this->response('Brand added successfully.', false);
 	}
+
 
 	public function update_brand(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
 			'id' => 'required',
-			'name' => 'required',
+			'name' => 'required|unique:brand,name,' . $request->id,
 			'picture' => 'required',
 		]);
+
 		if ($validator->fails()) {
 			return $this->response($validator->errors()->first(), true);
 		}
-		$BrandUpdate = Brand::where('id', $request->id)->first();
-		if (empty($BrandUpdate)) {
+
+		$BrandUpdate = Brand::find($request->id);
+
+		if (!$BrandUpdate) {
 			return $this->response('Brand not found', true);
 		}
+
 		if ($request->hasFile('picture')) {
 			if ($BrandUpdate->picture) {
-				unlink(public_path() . '/storage/brand/' . $BrandUpdate->picture);
+				$oldPath = public_path('storage/brand/' . $BrandUpdate->picture);
+				if (file_exists($oldPath)) {
+					unlink($oldPath);
+				}
 			}
 			$file = $request->file('picture');
 			$fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-			$path = public_path() . '/storage/brand/';
-			$file->move($path, $fileName);
+			$file->move(public_path('storage/brand'), $fileName);
 			$BrandUpdate->picture = $fileName;
 		}
+
 		$BrandUpdate->name = $request->name;
+		$slug = Str::slug($request->name);
+		$ExitSlug = Brand::where('id', '!=', $request->id)->where('slug', $slug)->first();
+		if (!empty($ExitSlug)) {
+			$slug = Str::slug($request->name . '-' . rand(1000, 9999));
+		}
+		$BrandUpdate->slug = $slug;
 		$BrandUpdate->save();
+
 		return $this->response('Brand updated successfully.', false);
 	}
+
 
 	public function delete_brand(Request $request)
 	{
